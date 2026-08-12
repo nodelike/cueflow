@@ -24,11 +24,12 @@ func (p *Postgres) SyncPlaylist(ctx context.Context, playlist spotify.Playlist, 
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	_, err = tx.Exec(ctx, `
-INSERT INTO spotify_playlists (id,name,kind,writable,synced_at)
-VALUES ($1,$2,$3,$4,NOW())
+INSERT INTO spotify_playlists (id,name,kind,writable,image_url,track_count,synced_at)
+VALUES ($1,$2,$3,$4,$5,$6,NOW())
 ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, kind=EXCLUDED.kind,
-  writable=EXCLUDED.writable, synced_at=EXCLUDED.synced_at`,
-		playlist.ID, playlist.Name, playlist.Kind, playlist.Writable)
+  writable=EXCLUDED.writable, image_url=EXCLUDED.image_url, track_count=EXCLUDED.track_count,
+  synced_at=EXCLUDED.synced_at`,
+		playlist.ID, playlist.Name, playlist.Kind, playlist.Writable, playlist.ImageURL, len(items))
 	if err != nil {
 		return fmt.Errorf("save playlist: %w", err)
 	}
@@ -43,4 +44,22 @@ ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, kind=EXCLUDED.kind,
 		}
 	}
 	return tx.Commit(ctx)
+}
+
+func (p *Postgres) SyncedPlaylists(ctx context.Context) (map[string]spotify.Playlist, error) {
+	rows, err := p.pool.Query(ctx, `SELECT id,name,kind,writable,image_url,track_count FROM spotify_playlists WHERE kind <> 'draft' ORDER BY name`)
+	if err != nil {
+		return nil, fmt.Errorf("list synced playlists: %w", err)
+	}
+	defer rows.Close()
+	result := map[string]spotify.Playlist{}
+	for rows.Next() {
+		var playlist spotify.Playlist
+		if err := rows.Scan(&playlist.ID, &playlist.Name, &playlist.Kind, &playlist.Writable, &playlist.ImageURL, &playlist.TrackCount); err != nil {
+			return nil, fmt.Errorf("scan synced playlist: %w", err)
+		}
+		playlist.Synced = true
+		result[playlist.ID] = playlist
+	}
+	return result, rows.Err()
 }

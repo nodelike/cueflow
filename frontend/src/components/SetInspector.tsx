@@ -1,14 +1,16 @@
 import { ArrowRight } from 'lucide-react'
 import type { SetTrack } from '../types'
+import { CamelotKey } from './CamelotKey'
+import { TrackArtwork } from './TrackArtwork'
 
 export function SetInspector({ item }: { item?: SetTrack }) {
   if (!item) return null
   return (
     <aside className="track-inspector" aria-label="Track and transition inspector">
-      <header><span>Track {String(item.position).padStart(2, '0')}</span><h2>{item.track.title}</h2><p>{item.track.artist}</p></header>
+      <header className="inspector-title"><TrackArtwork track={item.track} linked /><div><span>Track {String(item.position).padStart(2, '0')}</span><h2>{item.track.title}</h2><p>{item.track.artist}</p></div></header>
       <dl className="track-metadata">
         <div><dt>BPM</dt><dd>{item.track.bpm}</dd></div>
-        <div><dt>Key</dt><dd>{item.track.camelot}</dd></div>
+        <div><dt>Key</dt><dd><CamelotKey value={item.track.camelot} /></dd></div>
         <div><dt>Energy</dt><dd>{Math.round(item.track.energy * 100)}%</dd></div>
         <div><dt>Groove</dt><dd>{item.track.groove}</dd></div>
       </dl>

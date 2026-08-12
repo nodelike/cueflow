@@ -1,6 +1,8 @@
 import { Check, Plus, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Track } from '../types'
+import { CamelotKey } from './CamelotKey'
+import { TrackArtwork } from './TrackArtwork'
 
 type Props = {
   tracks: Track[]
@@ -50,6 +52,7 @@ export function RequiredTrackPicker({ tracks, selectedIDs, onChange }: Props) {
       <div className="section-label"><span>Must play</span><small>Every selected track is guaranteed</small></div>
       {selected.length > 0 && <div className="must-play-list">
         {selected.map((track) => <div key={track.id} className="must-play-item">
+          <TrackArtwork track={track} />
           <span><strong>{track.title}</strong><small>{track.artist}</small></span>
           <button type="button" onClick={() => toggle(track.id)} aria-label={`Remove ${track.title}`}><X size={14} /></button>
         </div>)}
@@ -64,8 +67,9 @@ export function RequiredTrackPicker({ tracks, selectedIDs, onChange }: Props) {
             {results.length === 0 ? <p className="no-results">No matching tracks.</p> : results.map((track) => {
               const active = selectedIDs.includes(track.id)
               return <button type="button" key={track.id} className={active ? 'selected' : ''} aria-pressed={active} onClick={() => toggle(track.id)}>
+                <TrackArtwork track={track} />
                 <span><strong>{track.title}</strong><small>{track.artist}</small></span>
-                <em>{track.bpm} BPM · {track.camelot}</em>
+                <em>{track.bpm} BPM <CamelotKey value={track.camelot} compact /></em>
                 <i>{active ? <Check size={15} /> : <Plus size={15} />}</i>
               </button>
             })}

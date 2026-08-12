@@ -25,6 +25,63 @@ func (s *Service) WithSpotify(client *spotify.Client) *Service { s.spotify = cli
 
 func (s *Service) SpotifyConnected() bool { return s.spotify != nil && s.spotify.Connected() }
 
+func (s *Service) SpotifyPlaylists(ctx context.Context) ([]spotify.Playlist, error) {
+	if s.spotify == nil || !s.spotify.Connected() {
+		return nil, fmt.Errorf("Spotify is not connected")
+	}
+	playlists, err := s.spotify.CurrentUserPlaylists(ctx)
+	if err != nil {
+		return nil, err
+	}
+	synced, err := s.store.SyncedPlaylists(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for index := range playlists {
+		if stored, ok := synced[playlists[index].ID]; ok {
+			playlists[index].Synced = true
+			playlists[index].Kind = stored.Kind
+		}
+	}
+	return playlists, nil
+}
+
+func (s *Service) SyncSpotifyPlaylists(ctx context.Context, playlistIDs []string) error {
+	if s.spotify == nil || !s.spotify.Connected() {
+		return fmt.Errorf("Spotify is not connected")
+	}
+	if len(playlistIDs) == 0 {
+		return fmt.Errorf("select at least one Spotify playlist")
+	}
+	available, err := s.spotify.CurrentUserPlaylists(ctx)
+	if err != nil {
+		return err
+	}
+	byID := make(map[string]spotify.Playlist, len(available))
+	for _, playlist := range available {
+		byID[playlist.ID] = playlist
+	}
+	seen := map[string]bool{}
+	for _, id := range playlistIDs {
+		if seen[id] {
+			continue
+		}
+		playlist, ok := byID[id]
+		if !ok {
+			return fmt.Errorf("Spotify playlist %q is unavailable", id)
+		}
+		items, err := s.spotify.PlaylistItems(ctx, playlist)
+		if err != nil {
+			return fmt.Errorf("sync %s: %w", playlist.Name, err)
+		}
+		if err := s.store.SyncPlaylist(ctx, playlist, items); err != nil {
+			return err
+		}
+		seen[id] = true
+	}
+	return nil
+}
+
 func (s *Service) Publish(ctx context.Context, draftID string) (spotify.Playlist, error) {
 	if s.spotify == nil {
 		return spotify.Playlist{}, fmt.Errorf("Spotify is not connected")
@@ -52,6 +109,18 @@ func (s *Service) Bootstrap(ctx context.Context) domain.Bootstrap {
 	if err != nil {
 		return domain.Bootstrap{Error: err.Error()}
 	}
+	catalog := make(map[string]domain.Track, len(tracks))
+	for _, track := range tracks {
+		catalog[track.ID] = track
+	}
+	for draftIndex := range drafts {
+		for trackIndex := range drafts[draftIndex].Tracks {
+			if current, ok := catalog[drafts[draftIndex].Tracks[trackIndex].Track.ID]; ok {
+				drafts[draftIndex].Tracks[trackIndex].Track.AlbumImageURL = current.AlbumImageURL
+				drafts[draftIndex].Tracks[trackIndex].Track.SourcePlaylistIDs = current.SourcePlaylistIDs
+			}
+		}
+	}
 	trackCount, draftCount, err := s.store.Count(ctx)
 	if err != nil {
 		return domain.Bootstrap{Error: err.Error()}
@@ -73,7 +142,7 @@ func (s *Service) Seed(ctx context.Context) error {
 }
 
 func (s *Service) Generate(ctx context.Context, request domain.GenerateRequest) ([]domain.SetDraft, error) {
-	tracks, err := s.store.ListTracks(ctx)
+	tracks, err := s.store.ListTracksForPlaylists(ctx, request.SourcePlaylistIDs, request.RequiredTrackIDs)
 	if err != nil {
 		return nil, err
 	}

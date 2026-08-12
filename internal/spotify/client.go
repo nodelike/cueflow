@@ -22,6 +22,34 @@ type Client struct {
 	mu         sync.Mutex
 }
 
+func (c *Client) CurrentUserPlaylists(ctx context.Context) ([]Playlist, error) {
+	playlists := []Playlist{}
+	for offset := 0; ; offset += 50 {
+		var page userPlaylistsPage
+		if err := c.get(ctx, "/me/playlists?limit=50&offset="+strconv.Itoa(offset), &page); err != nil {
+			return nil, err
+		}
+		for _, item := range page.Items {
+			if item.ID == "" {
+				continue
+			}
+			imageURL := ""
+			if len(item.Images) > 0 {
+				imageURL = item.Images[len(item.Images)-1].URL
+			}
+			trackCount := item.Items.Total
+			if trackCount == 0 {
+				trackCount = item.Tracks.Total
+			}
+			playlists = append(playlists, Playlist{ID: item.ID, Name: item.Name, Kind: "source", ImageURL: imageURL, TrackCount: trackCount})
+		}
+		if page.Next == "" || len(playlists) >= page.Total || len(page.Items) == 0 {
+			break
+		}
+	}
+	return playlists, nil
+}
+
 func (c *Client) PlaylistItems(ctx context.Context, playlist Playlist) ([]SyncedTrack, error) {
 	items := []SyncedTrack{}
 	for offset := 0; ; offset += 50 {

@@ -17,20 +17,36 @@ type Token struct {
 }
 
 type Playlist struct {
-	ID       string
-	Name     string
-	Kind     string
-	Writable bool
+	ID         string
+	Name       string
+	Kind       string
+	Writable   bool
+	ImageURL   string
+	TrackCount int
+	Synced     bool
 }
 
-var SourcePlaylists = []Playlist{
-	{ID: "5Qaffla02r1ZYK8Smd4kWu", Name: "House Vibezz", Kind: "source"},
-	{ID: "1TLgLgjMRDg022DNLzHod0", Name: "Afro Vibezz", Kind: "source"},
-	{ID: "1ap9KYrloP918ZzkYg6WK0", Name: "Tech House Vibezz", Kind: "source"},
-	{ID: "6IdiiFE2wWoWCnKBcsg2Ct", Name: "Techno Vibezz", Kind: "source"},
+type image struct {
+	URL string `json:"url"`
 }
 
-var MasterPlaylist = Playlist{ID: "52LZgW4bWZqo4lmi9fSQX2", Name: "Techno, Afro, Soul & EDM", Kind: "master"}
+type userPlaylistsPage struct {
+	Items []simplifiedPlaylist `json:"items"`
+	Next  string               `json:"next"`
+	Total int                  `json:"total"`
+}
+
+type simplifiedPlaylist struct {
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Images []image `json:"images"`
+	Items  struct {
+		Total int `json:"total"`
+	} `json:"items"`
+	Tracks struct {
+		Total int `json:"total"`
+	} `json:"tracks"`
+}
 
 type playlistPage struct {
 	Items []playlistItem `json:"items"`
@@ -52,6 +68,9 @@ type spotifyTrack struct {
 	Artists    []struct {
 		Name string `json:"name"`
 	} `json:"artists"`
+	Album struct {
+		Images []image `json:"images"`
+	} `json:"album"`
 }
 
 type SyncedTrack struct {
@@ -78,9 +97,13 @@ func (s SyncedTrack) DomainTrack() domain.Track {
 	for _, artist := range s.Track.Artists {
 		artists = append(artists, artist.Name)
 	}
+	imageURL := ""
+	if len(s.Track.Album.Images) > 0 {
+		imageURL = s.Track.Album.Images[len(s.Track.Album.Images)-1].URL
+	}
 	return domain.Track{
 		ID: "spotify-" + s.Track.ID, SpotifyID: s.Track.ID, SpotifyURI: s.Track.URI,
-		Title: s.Track.Name, Artist: strings.Join(artists, ", "),
+		Title: s.Track.Name, Artist: strings.Join(artists, ", "), AlbumImageURL: imageURL,
 		DurationSeconds: max(1, s.Track.DurationMS/1000), SourcePlaylist: s.Playlist.Name,
 		AddedAt: s.AddedAt, FeatureNeedsReview: true,
 		FeatureProvenance: "Spotify identity; musical features pending research",

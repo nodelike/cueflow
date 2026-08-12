@@ -52,6 +52,10 @@ func TestPlaylistPaginationAndTokenRefresh(t *testing.T) {
 		switch request.URL.Path {
 		case "/api/token":
 			_ = json.NewEncoder(writer).Encode(Token{AccessToken: "fresh", ExpiresIn: 3600})
+		case "/me/playlists":
+			if request.URL.Query().Get("offset") == "0" {
+				writer.Write([]byte(`{"items":[{"id":"list","name":"Afro Vibezz","images":[{"url":"https://image.test/large"},{"url":"https://image.test/small"}],"items":{"total":2}}],"next":"","total":1}`))
+			}
 		case "/playlists/list/items":
 			if request.Header.Get("Authorization") != "Bearer fresh" {
 				t.Fatalf("unexpected authorization header")
@@ -59,7 +63,7 @@ func TestPlaylistPaginationAndTokenRefresh(t *testing.T) {
 			pageCalls++
 			offset := request.URL.Query().Get("offset")
 			if offset == "0" {
-				writer.Write([]byte(`{"items":[{"added_at":"2026-08-10T12:00:00Z","item":{"id":"a","uri":"spotify:track:a","name":"One","type":"track","duration_ms":300000,"artists":[{"name":"A"}]}}],"next":"next","total":2}`))
+				writer.Write([]byte(`{"items":[{"added_at":"2026-08-10T12:00:00Z","item":{"id":"a","uri":"spotify:track:a","name":"One","type":"track","duration_ms":300000,"artists":[{"name":"A"}],"album":{"images":[{"url":"https://album.test/large"},{"url":"https://album.test/small"}]}}}],"next":"next","total":2}`))
 			} else {
 				writer.Write([]byte(`{"items":[{"added_at":"2026-08-11T12:00:00Z","item":{"id":"b","uri":"spotify:track:b","name":"Two","type":"track","duration_ms":300000,"artists":[{"name":"B"}]}}],"next":"","total":2}`))
 			}
@@ -70,6 +74,10 @@ func TestPlaylistPaginationAndTokenRefresh(t *testing.T) {
 	defer server.Close()
 	store := &memoryStore{token: Token{RefreshToken: "refresh", ExpiresAt: time.Now().Add(-time.Hour)}}
 	client := &Client{Store: store, APIBase: server.URL, OAuth: OAuth{ClientID: "client", AccountsBase: server.URL}, HTTPClient: server.Client()}
+	playlists, err := client.CurrentUserPlaylists(context.Background())
+	if err != nil || len(playlists) != 1 || playlists[0].ImageURL != "https://image.test/small" || playlists[0].TrackCount != 2 {
+		t.Fatalf("playlist catalog mapping failed: %#v %v", playlists, err)
+	}
 	items, err := client.PlaylistItems(context.Background(), Playlist{ID: "list", Name: "Afro Vibezz"})
 	if err != nil {
 		t.Fatal(err)
@@ -78,7 +86,7 @@ func TestPlaylistPaginationAndTokenRefresh(t *testing.T) {
 		t.Fatalf("pagination or refresh failed")
 	}
 	track := items[0].DomainTrack()
-	if track.Artist != "A" || !track.FeatureNeedsReview || !strings.HasPrefix(track.ID, "spotify-") {
+	if track.Artist != "A" || track.AlbumImageURL != "https://album.test/small" || !track.FeatureNeedsReview || !strings.HasPrefix(track.ID, "spotify-") {
 		t.Fatal("synced track mapping is unsafe")
 	}
 }

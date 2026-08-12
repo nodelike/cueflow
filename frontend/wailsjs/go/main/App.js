@@ -33,3 +33,11 @@ export function SeedReferenceCatalog() {
 export function SpotifyConnected() {
   return window['go']['main']['App']['SpotifyConnected']();
 }
+
+export function SpotifyPlaylists() {
+  return window['go']['main']['App']['SpotifyPlaylists']();
+}
+
+export function SyncSpotifyPlaylists(arg1) {
+  return window['go']['main']['App']['SyncSpotifyPlaylists'](arg1);
+}

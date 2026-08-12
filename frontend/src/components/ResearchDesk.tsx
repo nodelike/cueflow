@@ -1,6 +1,7 @@
 import { Check, ExternalLink, Headphones, Save, ShieldCheck } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Track, TrackEnrichment } from '../types'
+import { TrackArtwork } from './TrackArtwork'
 
 type Props = {
   tracks: Track[]
@@ -41,14 +42,14 @@ export function ResearchDesk({ tracks, busy, onSave }: Props) {
         <div className="queue-heading"><span className="eyebrow">NEEDS HUMAN EARS</span><strong>{tracks.length}</strong><small>pending</small></div>
         {tracks.map((track, index) => (
           <button type="button" key={track.id} className={track.id === selected.id ? 'active' : ''} onClick={() => setSelectedID(track.id)}>
-            <span>{String(index + 1).padStart(2, '0')}</span><div><strong>{track.title}</strong><small>{track.artist}</small></div><em>{track.sourcePlaylist}</em>
+            <span>{String(index + 1).padStart(2, '0')}</span><TrackArtwork track={track} /><div><strong>{track.title}</strong><small>{track.artist}</small></div><em>{track.sourcePlaylist}</em>
           </button>
         ))}
       </aside>
 
       <section className="research-form">
         <div className="research-title">
-          <div><span className="eyebrow">TRACK DOSSIER</span><h1>{selected.title}</h1><p>{selected.artist} · {selected.sourcePlaylist}</p></div>
+          <div className="research-track-title"><TrackArtwork track={selected} linked /><div><span className="eyebrow">TRACK DOSSIER</span><h1>{selected.title}</h1><p>{selected.artist} · {selected.sourcePlaylist}</p></div></div>
           {selected.spotifyUri && <a href={`https://open.spotify.com/track/${selected.spotifyId}`} target="_blank" rel="noreferrer">Open in Spotify <ExternalLink size={13} /></a>}
         </div>
 

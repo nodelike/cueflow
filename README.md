@@ -5,13 +5,9 @@ crates, stores explainable musical features in PostgreSQL, generates multiple
 set variations, visualizes their tempo/key/energy flow, and publishes only to
 disposable Set Lab playlists.
 
-The permanent source playlists are treated as read-only:
-
-- House Vibezz
-- Afro Vibezz
-- Tech House Vibezz
-- Techno Vibezz
-- Techno, Afro, Soul & EDM (combined master)
+Source crates are chosen from the connected user's Spotify playlists. Cueflow
+syncs the selected playlists read-only and never removes, reorders, or adds
+tracks in those permanent sources.
 
 ## Stack
 
@@ -47,8 +43,11 @@ Connect Spotify with PKCE and store the refresh token in macOS Keychain:
 
 ```sh
 make spotify-auth
-make spotify-sync
+make spotify-sync PLAYLIST_IDS='spotify_playlist_id another_playlist_id'
 ```
+
+The desktop app can list the connected account's playlists and sync selected
+source crates directly, so the CLI IDs are only needed for headless workflows.
 
 The packaged desktop app also has a **Connect Spotify** button. It opens the
 same PKCE consent flow and writes the resulting token directly to Keychain;

@@ -1,27 +1,36 @@
 import { ChevronDown, Sparkles } from 'lucide-react'
-import type { GenerateRequest, Track } from '../types'
+import type { GenerateRequest, SpotifyPlaylist, Track } from '../types'
+import { PlaylistPicker } from './PlaylistPicker'
 import { RequiredTrackPicker } from './RequiredTrackPicker'
 
 type Props = {
   value: GenerateRequest
   tracks: Track[]
+  playlists: SpotifyPlaylist[]
+  spotifyReady: boolean
   busy: boolean
   onChange: (request: GenerateRequest) => void
+  onSyncSources: (ids: string[]) => Promise<void>
   onGenerate: () => void
 }
 
 const grooveOptions = ['afro', 'tribal', 'house', 'tech-house', 'techno']
 
-export function GeneratorPanel({ value, tracks, busy, onChange, onGenerate }: Props) {
+export function GeneratorPanel({ value, tracks, playlists, spotifyReady, busy, onChange, onSyncSources, onGenerate }: Props) {
   function update<K extends keyof GenerateRequest>(key: K, next: GenerateRequest[K]) { onChange({ ...value, [key]: next }) }
   function toggleGroove(groove: string) {
     const selected = value.allowedGrooves.includes(groove)
     update('allowedGrooves', selected ? value.allowedGrooves.filter((item) => item !== groove) : [...value.allowedGrooves, groove])
   }
+  const readyCount = value.sourcePlaylistIds.length === 0 ? tracks.length : tracks.filter((track) => track.sourcePlaylistIds?.some((id) => value.sourcePlaylistIds.includes(id))).length
+  async function applySources(ids: string[]) {
+    if (ids.length === 0) { update('sourcePlaylistIds', []); return }
+    await onSyncSources(ids)
+  }
 
   return (
     <aside className="brief-panel" aria-label="Set brief">
-      <div className="brief-heading"><div><span>Set brief</span><h1>Build a set</h1></div><small>{tracks.length} tracks ready</small></div>
+      <div className="brief-heading"><div><span>Set brief</span><h1>Build a set</h1></div><small>{readyCount} tracks ready</small></div>
 
       <label className="control wide"><span>Name</span><input value={value.name} onChange={(event) => update('name', event.target.value)} /></label>
 
@@ -33,6 +42,8 @@ export function GeneratorPanel({ value, tracks, busy, onChange, onGenerate }: Pr
           <option value="journey">Journey</option><option value="roller">Roller</option><option value="peak">Peak-time</option><option value="sunset">Sunset</option>
         </select></label>
       </div>
+
+      <PlaylistPicker playlists={playlists} selectedIDs={value.sourcePlaylistIds} connected={spotifyReady} busy={busy} onApply={applySources} />
 
       <RequiredTrackPicker tracks={tracks} selectedIDs={value.requiredTrackIds} onChange={(ids) => update('requiredTrackIds', ids)} />
 

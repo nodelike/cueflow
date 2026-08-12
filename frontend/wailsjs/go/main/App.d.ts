@@ -18,3 +18,7 @@ export function PublishSet(arg1:string):Promise<spotify.Playlist>;
 export function SeedReferenceCatalog():Promise<domain.Bootstrap>;
 
 export function SpotifyConnected():Promise<boolean>;
+
+export function SpotifyPlaylists():Promise<Array<spotify.Playlist>>;
+
+export function SyncSpotifyPlaylists(arg1:Array<string>):Promise<domain.Bootstrap>;

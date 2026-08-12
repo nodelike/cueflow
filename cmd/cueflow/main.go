@@ -42,7 +42,11 @@ func main() {
 		}
 		fmt.Printf("seeded %d reference tracks\n", len(fixtures.Tracks()))
 	case "spotify-sync":
-		if err := spotifySync(ctx, cfg, repository); err != nil {
+		if len(os.Args) < 3 {
+			usage()
+			os.Exit(2)
+		}
+		if err := spotifySync(ctx, cfg, repository, os.Args[2:]); err != nil {
 			fatal(err)
 		}
 	case "spotify-feature-check":
@@ -100,7 +104,7 @@ func spotifyFeatureCheck(ctx context.Context, cfg config.Config, trackID string)
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: cueflow migrate|seed|spotify-auth|spotify-sync|spotify-feature-check TRACK_ID|enrich-import FILE.csv")
+	fmt.Fprintln(os.Stderr, "usage: cueflow migrate|seed|spotify-auth|spotify-sync PLAYLIST_ID...|spotify-feature-check TRACK_ID|enrich-import FILE.csv")
 }
 
 func spotifyAuth(ctx context.Context, cfg config.Config) error {
@@ -116,12 +120,23 @@ func spotifyAuth(ctx context.Context, cfg config.Config) error {
 	return err
 }
 
-func spotifySync(ctx context.Context, cfg config.Config, repository *store.Postgres) error {
+func spotifySync(ctx context.Context, cfg config.Config, repository *store.Postgres, playlistIDs []string) error {
 	oauth := spotify.OAuth{ClientID: cfg.SpotifyClientID, RedirectURI: cfg.SpotifyRedirectURI}
 	client := &spotify.Client{ClientID: cfg.SpotifyClientID, OAuth: oauth, Store: spotify.KeyringStore{}}
-	playlists := append(append([]spotify.Playlist{}, spotify.SourcePlaylists...), spotify.MasterPlaylist)
-	total := 0
+	playlists, err := client.CurrentUserPlaylists(ctx)
+	if err != nil {
+		return err
+	}
+	byID := make(map[string]spotify.Playlist, len(playlists))
 	for _, playlist := range playlists {
+		byID[playlist.ID] = playlist
+	}
+	total := 0
+	for _, id := range playlistIDs {
+		playlist, ok := byID[id]
+		if !ok {
+			return fmt.Errorf("Spotify playlist %q is unavailable", id)
+		}
 		items, err := client.PlaylistItems(ctx, playlist)
 		if err != nil {
 			return fmt.Errorf("sync %s: %w", playlist.Name, err)

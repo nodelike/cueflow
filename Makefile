@@ -21,7 +21,8 @@ spotify-auth:
 	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/cueflow spotify-auth
 
 spotify-sync:
-	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/cueflow spotify-sync
+	@test -n "$(PLAYLIST_IDS)" || (echo "usage: make spotify-sync PLAYLIST_IDS='id1 id2'" >&2; exit 2)
+	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/cueflow spotify-sync $(PLAYLIST_IDS)
 
 enrich-import:
 	@test -n "$(FILE)" || (echo "usage: make enrich-import FILE=/path/to/enrichment.csv" >&2; exit 2)

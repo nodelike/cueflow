@@ -85,7 +85,7 @@ func (p *Postgres) ListNeedsReview(ctx context.Context, limit int) ([]domain.Tra
 	if limit <= 0 {
 		limit = 100
 	}
-	rows, err := p.pool.Query(ctx, `SELECT id,spotify_id,spotify_uri,title,artist,duration_seconds,bpm,musical_key,camelot,energy,groove,vocal,role,source_playlist,added_at,feature_confidence,feature_provenance,feature_needs_review FROM tracks WHERE feature_needs_review ORDER BY added_at,id LIMIT $1`, limit)
+	rows, err := p.pool.Query(ctx, `SELECT id,spotify_id,spotify_uri,title,artist,album_image_url,duration_seconds,bpm,musical_key,camelot,energy,groove,vocal,role,source_playlist,added_at,feature_confidence,feature_provenance,feature_needs_review FROM tracks WHERE feature_needs_review ORDER BY added_at,id LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (p *Postgres) ListNeedsReview(ctx context.Context, limit int) ([]domain.Tra
 	out := []domain.Track{}
 	for rows.Next() {
 		var track domain.Track
-		if err := rows.Scan(&track.ID, &track.SpotifyID, &track.SpotifyURI, &track.Title, &track.Artist, &track.DurationSeconds, &track.BPM, &track.MusicalKey, &track.Camelot, &track.Energy, &track.Groove, &track.Vocal, &track.Role, &track.SourcePlaylist, &track.AddedAt, &track.FeatureConfidence, &track.FeatureProvenance, &track.FeatureNeedsReview); err != nil {
+		if err := rows.Scan(&track.ID, &track.SpotifyID, &track.SpotifyURI, &track.Title, &track.Artist, &track.AlbumImageURL, &track.DurationSeconds, &track.BPM, &track.MusicalKey, &track.Camelot, &track.Energy, &track.Groove, &track.Vocal, &track.Role, &track.SourcePlaylist, &track.AddedAt, &track.FeatureConfidence, &track.FeatureProvenance, &track.FeatureNeedsReview); err != nil {
 			return nil, err
 		}
 		out = append(out, track)

@@ -1,4 +1,4 @@
-import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, Track, TrackEnrichment } from './types'
+import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, SpotifyPlaylist, Track, TrackEnrichment } from './types'
 
 const API_ROOT = import.meta.env.VITE_CUEFLOW_API_URL ?? 'http://127.0.0.1:8787'
 
@@ -40,6 +40,20 @@ export async function spotifyConnected(): Promise<boolean> {
 export async function connectSpotify(): Promise<void> {
   if (desktop()) return desktop()!.ConnectSpotify()
   throw new Error('Spotify connection is available in the Cueflow desktop app')
+}
+
+export async function spotifyPlaylists(): Promise<SpotifyPlaylist[]> {
+  if (desktop()) return desktop()!.SpotifyPlaylists()
+  return json<SpotifyPlaylist[]>(await fetch(`${API_ROOT}/api/spotify/playlists`))
+}
+
+export async function syncSpotifyPlaylists(playlistIds: string[]): Promise<Bootstrap> {
+  if (desktop()) return desktop()!.SyncSpotifyPlaylists(playlistIds)
+  return json<Bootstrap>(await fetch(`${API_ROOT}/api/spotify/playlists/sync`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playlistIds }),
+  }))
 }
 
 export async function publishSet(draftId: string): Promise<PublishedPlaylist> {

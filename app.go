@@ -84,6 +84,23 @@ func (a *App) GenerateSets(request domain.GenerateRequest) ([]domain.SetDraft, e
 
 func (a *App) SpotifyConnected() bool { return a.service != nil && a.service.SpotifyConnected() }
 
+func (a *App) SpotifyPlaylists() ([]spotify.Playlist, error) {
+	if a.service == nil {
+		return nil, fmt.Errorf("Cueflow is not ready")
+	}
+	return a.service.SpotifyPlaylists(a.ctx)
+}
+
+func (a *App) SyncSpotifyPlaylists(playlistIDs []string) (domain.Bootstrap, error) {
+	if a.service == nil {
+		return domain.Bootstrap{}, fmt.Errorf("Cueflow is not ready")
+	}
+	if err := a.service.SyncSpotifyPlaylists(a.ctx, playlistIDs); err != nil {
+		return domain.Bootstrap{}, err
+	}
+	return a.service.Bootstrap(a.ctx), nil
+}
+
 func (a *App) ConnectSpotify() error {
 	if a.service == nil {
 		return fmt.Errorf("Cueflow is not ready")

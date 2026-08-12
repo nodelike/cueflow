@@ -153,6 +153,7 @@ export namespace domain {
 	    spotifyUri?: string;
 	    title: string;
 	    artist: string;
+	    albumImageUrl?: string;
 	    durationSeconds: number;
 	    bpm: number;
 	    musicalKey: string;
@@ -162,6 +163,7 @@ export namespace domain {
 	    vocal: number;
 	    role: string;
 	    sourcePlaylist: string;
+	    sourcePlaylistIds?: string[];
 	    // Go type: time
 	    addedAt: any;
 	    featureConfidence: number;
@@ -179,6 +181,7 @@ export namespace domain {
 	        this.spotifyUri = source["spotifyUri"];
 	        this.title = source["title"];
 	        this.artist = source["artist"];
+	        this.albumImageUrl = source["albumImageUrl"];
 	        this.durationSeconds = source["durationSeconds"];
 	        this.bpm = source["bpm"];
 	        this.musicalKey = source["musicalKey"];
@@ -188,6 +191,7 @@ export namespace domain {
 	        this.vocal = source["vocal"];
 	        this.role = source["role"];
 	        this.sourcePlaylist = source["sourcePlaylist"];
+	        this.sourcePlaylistIds = source["sourcePlaylistIds"];
 	        this.addedAt = this.convertValues(source["addedAt"], null);
 	        this.featureConfidence = source["featureConfidence"];
 	        this.featureProvenance = source["featureProvenance"];
@@ -262,6 +266,7 @@ export namespace domain {
 	    startBpm: number;
 	    endBpm: number;
 	    allowedGrooves?: string[];
+	    sourcePlaylistIds?: string[];
 	    requiredTrackIds?: string[];
 	    excludedTrackIds?: string[];
 	    seed: number;
@@ -281,6 +286,7 @@ export namespace domain {
 	        this.startBpm = source["startBpm"];
 	        this.endBpm = source["endBpm"];
 	        this.allowedGrooves = source["allowedGrooves"];
+	        this.sourcePlaylistIds = source["sourcePlaylistIds"];
 	        this.requiredTrackIds = source["requiredTrackIds"];
 	        this.excludedTrackIds = source["excludedTrackIds"];
 	        this.seed = source["seed"];
@@ -330,6 +336,9 @@ export namespace spotify {
 	    Name: string;
 	    Kind: string;
 	    Writable: boolean;
+	    ImageURL: string;
+	    TrackCount: number;
+	    Synced: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Playlist(source);
@@ -341,6 +350,9 @@ export namespace spotify {
 	        this.Name = source["Name"];
 	        this.Kind = source["Kind"];
 	        this.Writable = source["Writable"];
+	        this.ImageURL = source["ImageURL"];
+	        this.TrackCount = source["TrackCount"];
+	        this.Synced = source["Synced"];
 	    }
 	}
 

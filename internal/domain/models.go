@@ -8,6 +8,7 @@ type Track struct {
 	SpotifyURI         string    `json:"spotifyUri,omitempty"`
 	Title              string    `json:"title"`
 	Artist             string    `json:"artist"`
+	AlbumImageURL      string    `json:"albumImageUrl,omitempty"`
 	DurationSeconds    int       `json:"durationSeconds"`
 	BPM                float64   `json:"bpm"`
 	MusicalKey         string    `json:"musicalKey"`
@@ -17,6 +18,7 @@ type Track struct {
 	Vocal              float64   `json:"vocal"`
 	Role               string    `json:"role"`
 	SourcePlaylist     string    `json:"sourcePlaylist"`
+	SourcePlaylistIDs  []string  `json:"sourcePlaylistIds,omitempty"`
 	AddedAt            time.Time `json:"addedAt"`
 	FeatureConfidence  float64   `json:"featureConfidence"`
 	FeatureProvenance  string    `json:"featureProvenance"`
@@ -56,6 +58,7 @@ type GenerateRequest struct {
 	StartBPM           float64  `json:"startBpm"`
 	EndBPM             float64  `json:"endBpm"`
 	AllowedGrooves     []string `json:"allowedGrooves,omitempty"`
+	SourcePlaylistIDs  []string `json:"sourcePlaylistIds,omitempty"`
 	RequiredTrackIDs   []string `json:"requiredTrackIds,omitempty"`
 	ExcludedTrackIDs   []string `json:"excludedTrackIds,omitempty"`
 	Seed               int64    `json:"seed"`

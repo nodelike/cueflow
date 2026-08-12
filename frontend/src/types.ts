@@ -4,6 +4,7 @@ export type Track = {
   spotifyUri?: string
   title: string
   artist: string
+  albumImageUrl?: string
   durationSeconds: number
   bpm: number
   musicalKey: string
@@ -13,6 +14,7 @@ export type Track = {
   vocal: number
   role: string
   sourcePlaylist: string
+  sourcePlaylistIds?: string[]
   addedAt: string
   featureConfidence: number
   featureProvenance: string
@@ -85,6 +87,7 @@ export type GenerateRequest = {
   startBpm: number
   endBpm: number
   allowedGrooves: string[]
+  sourcePlaylistIds: string[]
   requiredTrackIds: string[]
   excludedTrackIds: string[]
   seed: number
@@ -99,6 +102,8 @@ declare global {
           SeedReferenceCatalog: () => Promise<Bootstrap>
           GenerateSets: (request: GenerateRequest) => Promise<SetDraft[]>
           SpotifyConnected: () => Promise<boolean>
+          SpotifyPlaylists: () => Promise<SpotifyPlaylist[]>
+          SyncSpotifyPlaylists: (playlistIds: string[]) => Promise<Bootstrap>
           ConnectSpotify: () => Promise<void>
           PublishSet: (draftId: string) => Promise<PublishedPlaylist>
           NeedsReview: () => Promise<Track[]>
@@ -110,3 +115,13 @@ declare global {
 }
 
 export type PublishedPlaylist = { ID: string; Name: string; Kind: string; Writable: boolean }
+
+export type SpotifyPlaylist = {
+  ID: string
+  Name: string
+  Kind: string
+  Writable: boolean
+  ImageURL: string
+  TrackCount: number
+  Synced: boolean
+}

@@ -8,11 +8,16 @@ const bootstrap = vi.fn()
 const generateSets = vi.fn()
 const needsReview = vi.fn()
 const enrichTrack = vi.fn()
+const spotifyConnected = vi.fn()
+const spotifyPlaylists = vi.fn()
+const syncSpotifyPlaylists = vi.fn()
 vi.mock('./api', () => ({
   bootstrap: () => bootstrap(),
   generateSets: (...args: unknown[]) => generateSets(...args),
   seedReferenceCatalog: vi.fn(),
-  spotifyConnected: vi.fn().mockResolvedValue(false),
+  spotifyConnected: () => spotifyConnected(),
+  spotifyPlaylists: () => spotifyPlaylists(),
+  syncSpotifyPlaylists: (...args: unknown[]) => syncSpotifyPlaylists(...args),
   connectSpotify: vi.fn(),
   publishSet: vi.fn(),
   needsReview: () => needsReview(),
@@ -24,6 +29,7 @@ describe('Cueflow set desk', () => {
     window.localStorage.clear()
     document.documentElement.dataset.theme = 'light'
     bootstrap.mockResolvedValue(bootstrapData); generateSets.mockResolvedValue([draft]); needsReview.mockResolvedValue([]); enrichTrack.mockResolvedValue(undefined)
+    spotifyConnected.mockResolvedValue(false); spotifyPlaylists.mockResolvedValue([]); syncSpotifyPlaylists.mockResolvedValue(bootstrapData)
   })
 
   it('renders the persisted set and exposes transition reasoning', async () => {
@@ -86,6 +92,37 @@ describe('Cueflow set desk', () => {
     expect(window.localStorage.getItem('cueflow-theme')).toBe('dark')
     expect(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()).toBe('#DEFF00')
     expect(screen.getByRole('button', { name: 'Use light mode' })).toBeInTheDocument()
+  })
+
+  it('lets the user choose and persist Spotify source playlists', async () => {
+    spotifyConnected.mockResolvedValue(true)
+    spotifyPlaylists.mockResolvedValue([
+      { ID: 'afro', Name: 'Afro Vibezz', Kind: 'source', Writable: false, ImageURL: 'https://image.test/afro', TrackCount: 42, Synced: true },
+      { ID: 'techno', Name: 'Techno Vibezz', Kind: 'source', Writable: false, ImageURL: 'https://image.test/techno', TrackCount: 30, Synced: false },
+    ])
+    render(<App />)
+    await screen.findByText('Afro to pressure — A')
+    await userEvent.click(screen.getByRole('button', { name: 'Choose playlists' }))
+    const picker = screen.getByRole('dialog', { name: 'Choose source crates' })
+    await userEvent.type(within(picker).getByRole('searchbox', { name: 'Search playlists' }), 'techno')
+    await userEvent.click(within(picker).getByRole('button', { name: /Techno Vibezz/ }))
+    await userEvent.click(within(picker).getByRole('button', { name: 'Sync & use' }))
+    await waitFor(() => expect(syncSpotifyPlaylists).toHaveBeenCalledWith(['techno']))
+    await waitFor(() => expect(window.localStorage.getItem('cueflow-source-playlist-ids')).toBe('["techno"]'))
+  })
+
+  it('shows album art and color-coded Camelot keys in the set', async () => {
+    const illustrated = {
+      ...draft,
+      tracks: draft.tracks.map((item, index) => ({ ...item, track: { ...item.track, albumImageUrl: `https://image.test/${index}`, camelot: index === 0 ? '8A' : '9A' } })),
+    }
+    bootstrap.mockResolvedValue({ ...bootstrapData, drafts: [illustrated], tracks: illustrated.tracks.map((item) => item.track) })
+    render(<App />)
+    await screen.findByText('Afro to pressure — A')
+    expect(document.querySelectorAll('.track-ledger .track-artwork img')).toHaveLength(2)
+    const keys = document.querySelectorAll('.track-ledger .camelot-key')
+    expect(keys).toHaveLength(2)
+    expect(keys[0].getAttribute('style')).not.toBe(keys[1].getAttribute('style'))
   })
 
   it('opens the provenance-aware research queue', async () => {

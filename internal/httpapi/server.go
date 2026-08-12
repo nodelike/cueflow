@@ -29,10 +29,38 @@ func New(svc *service.Service, logger *slog.Logger) http.Handler {
 	router.Post("/api/seed", server.seed)
 	router.Post("/api/sets/generate", server.generate)
 	router.Get("/api/spotify/status", server.spotifyStatus)
+	router.Get("/api/spotify/playlists", server.spotifyPlaylists)
+	router.Post("/api/spotify/playlists/sync", server.syncSpotifyPlaylists)
 	router.Post("/api/sets/{id}/publish", server.publish)
 	router.Get("/api/research/queue", server.researchQueue)
 	router.Put("/api/tracks/{id}/enrichment", server.enrichTrack)
 	return router
+}
+
+func (s *Server) spotifyPlaylists(writer http.ResponseWriter, request *http.Request) {
+	playlists, err := s.service.SpotifyPlaylists(request.Context())
+	if err != nil {
+		writeError(writer, http.StatusUnprocessableEntity, err)
+		return
+	}
+	writeJSON(writer, http.StatusOK, playlists)
+}
+
+func (s *Server) syncSpotifyPlaylists(writer http.ResponseWriter, request *http.Request) {
+	var input struct {
+		PlaylistIDs []string `json:"playlistIds"`
+	}
+	decoder := json.NewDecoder(http.MaxBytesReader(writer, request.Body, 1<<20))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		writeError(writer, http.StatusBadRequest, err)
+		return
+	}
+	if err := s.service.SyncSpotifyPlaylists(request.Context(), input.PlaylistIDs); err != nil {
+		writeError(writer, http.StatusUnprocessableEntity, err)
+		return
+	}
+	writeJSON(writer, http.StatusOK, s.service.Bootstrap(request.Context()))
 }
 
 func (s *Server) researchQueue(writer http.ResponseWriter, request *http.Request) {

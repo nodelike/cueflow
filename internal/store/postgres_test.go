@@ -48,6 +48,7 @@ func TestPostgresRoundTripAndLatestSession(t *testing.T) {
 		t.Fatal(err)
 	}
 	tracks := fixtures.Tracks()[:4]
+	tracks[0].AlbumImageURL = "https://image.test/album"
 	if err := repository.UpsertTracks(ctx, tracks); err != nil {
 		t.Fatal(err)
 	}
@@ -56,6 +57,21 @@ func TestPostgresRoundTripAndLatestSession(t *testing.T) {
 		t.Fatalf("track round trip: %d %v", len(listed), err)
 	}
 	now := time.Now().UTC()
+	const playlistID = "crate-afro"
+	if _, err := repository.pool.Exec(ctx, `INSERT INTO spotify_playlists(id,name,kind,writable,image_url,track_count,synced_at) VALUES($1,'Afro crate','source',FALSE,'https://image.test/crate',1,NOW())`, playlistID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repository.pool.Exec(ctx, `INSERT INTO playlist_tracks(playlist_id,track_id,position,added_at) VALUES($1,$2,0,$3)`, playlistID, tracks[0].ID, now); err != nil {
+		t.Fatal(err)
+	}
+	filtered, err := repository.ListTracksForPlaylists(ctx, []string{playlistID}, nil)
+	if err != nil || len(filtered) != 1 || filtered[0].ID != tracks[0].ID || filtered[0].AlbumImageURL == "" {
+		t.Fatalf("playlist-filtered tracks: %#v err=%v", filtered, err)
+	}
+	requiredOverride, err := repository.ListTracksForPlaylists(ctx, []string{playlistID}, []string{tracks[1].ID})
+	if err != nil || len(requiredOverride) != 2 {
+		t.Fatalf("required track did not override source filter: %#v err=%v", requiredOverride, err)
+	}
 	for session := 1; session <= 2; session++ {
 		drafts := []domain.SetDraft{{ID: uuid.NewString(), SessionID: fmt.Sprintf("session-%d", session), Name: fmt.Sprintf("Draft %d", session), Variation: 1, Arc: "journey", DurationSeconds: 300, QualityScore: 80 + float64(session), CreatedAt: now.Add(time.Duration(session) * time.Second)}}
 		if err := repository.SaveDrafts(ctx, drafts); err != nil {

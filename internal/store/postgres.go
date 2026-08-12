@@ -69,15 +69,16 @@ func (p *Postgres) UpsertTracks(ctx context.Context, tracks []domain.Track) erro
 	defer func() { _ = tx.Rollback(ctx) }()
 	const query = `
 INSERT INTO tracks (
-  id, spotify_id, spotify_uri, title, artist, duration_seconds, bpm,
+  id, spotify_id, spotify_uri, title, artist, album_image_url, duration_seconds, bpm,
   musical_key, camelot, energy, groove, vocal, role, source_playlist,
   added_at, feature_confidence, feature_provenance, feature_needs_review, updated_at
 ) VALUES (
-  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NOW()
+  $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW()
 )
 ON CONFLICT (id) DO UPDATE SET
   spotify_id=EXCLUDED.spotify_id, spotify_uri=EXCLUDED.spotify_uri,
   title=EXCLUDED.title, artist=EXCLUDED.artist,
+  album_image_url=CASE WHEN EXCLUDED.album_image_url <> '' THEN EXCLUDED.album_image_url ELSE tracks.album_image_url END,
   duration_seconds=EXCLUDED.duration_seconds,
   bpm=CASE WHEN EXCLUDED.bpm > 0 THEN EXCLUDED.bpm ELSE tracks.bpm END,
   musical_key=CASE WHEN EXCLUDED.musical_key <> '' THEN EXCLUDED.musical_key ELSE tracks.musical_key END,
@@ -95,7 +96,7 @@ ON CONFLICT (id) DO UPDATE SET
 	for _, track := range tracks {
 		if _, err := tx.Exec(ctx, query,
 			track.ID, track.SpotifyID, track.SpotifyURI, track.Title, track.Artist,
-			track.DurationSeconds, track.BPM, track.MusicalKey, track.Camelot,
+			track.AlbumImageURL, track.DurationSeconds, track.BPM, track.MusicalKey, track.Camelot,
 			track.Energy, track.Groove, track.Vocal, track.Role, track.SourcePlaylist,
 			track.AddedAt, track.FeatureConfidence, track.FeatureProvenance,
 			track.FeatureNeedsReview,
@@ -110,12 +111,26 @@ ON CONFLICT (id) DO UPDATE SET
 }
 
 func (p *Postgres) ListTracks(ctx context.Context) ([]domain.Track, error) {
+	return p.listTracks(ctx, nil, nil)
+}
+
+func (p *Postgres) ListTracksForPlaylists(ctx context.Context, playlistIDs, requiredTrackIDs []string) ([]domain.Track, error) {
+	return p.listTracks(ctx, playlistIDs, requiredTrackIDs)
+}
+
+func (p *Postgres) listTracks(ctx context.Context, playlistIDs, requiredTrackIDs []string) ([]domain.Track, error) {
 	rows, err := p.pool.Query(ctx, `
-SELECT id, spotify_id, spotify_uri, title, artist, duration_seconds, bpm,
-       musical_key, camelot, energy, groove, vocal, role, source_playlist,
-       added_at, feature_confidence, feature_provenance, feature_needs_review
-FROM tracks
-ORDER BY added_at, id`)
+SELECT t.id, t.spotify_id, t.spotify_uri, t.title, t.artist, t.album_image_url, t.duration_seconds, t.bpm,
+       t.musical_key, t.camelot, t.energy, t.groove, t.vocal, t.role, t.source_playlist,
+       t.added_at, t.feature_confidence, t.feature_provenance, t.feature_needs_review,
+       COALESCE(array_agg(DISTINCT pt.playlist_id) FILTER (WHERE pt.playlist_id IS NOT NULL), '{}')
+FROM tracks t
+LEFT JOIN playlist_tracks pt ON pt.track_id=t.id
+WHERE COALESCE(cardinality($1::text[]), 0) = 0
+   OR EXISTS (SELECT 1 FROM playlist_tracks selected WHERE selected.track_id=t.id AND selected.playlist_id=ANY($1::text[]))
+   OR t.id=ANY($2::text[])
+GROUP BY t.id
+ORDER BY t.added_at, t.id`, playlistIDs, requiredTrackIDs)
 	if err != nil {
 		return nil, fmt.Errorf("list tracks: %w", err)
 	}
@@ -125,10 +140,10 @@ ORDER BY added_at, id`)
 		var track domain.Track
 		if err := rows.Scan(
 			&track.ID, &track.SpotifyID, &track.SpotifyURI, &track.Title, &track.Artist,
-			&track.DurationSeconds, &track.BPM, &track.MusicalKey, &track.Camelot,
+			&track.AlbumImageURL, &track.DurationSeconds, &track.BPM, &track.MusicalKey, &track.Camelot,
 			&track.Energy, &track.Groove, &track.Vocal, &track.Role, &track.SourcePlaylist,
 			&track.AddedAt, &track.FeatureConfidence, &track.FeatureProvenance,
-			&track.FeatureNeedsReview,
+			&track.FeatureNeedsReview, &track.SourcePlaylistIDs,
 		); err != nil {
 			return nil, fmt.Errorf("scan track: %w", err)
 		}
