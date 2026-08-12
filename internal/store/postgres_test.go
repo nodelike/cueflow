@@ -93,6 +93,10 @@ func TestPostgresRoundTripAndLatestSession(t *testing.T) {
 	if _, err := repository.pool.Exec(ctx, `INSERT INTO playlist_tracks(playlist_id,track_id,position,added_at) VALUES($1,$2,0,$3)`, playlistID, tracks[0].ID, now); err != nil {
 		t.Fatal(err)
 	}
+	listed, err = repository.ListTracks(ctx)
+	if err != nil || len(listed) != 1 || listed[0].ID != tracks[0].ID {
+		t.Fatalf("all-synced catalog included non-members: %#v err=%v", listed, err)
+	}
 	filtered, err := repository.ListTracksForPlaylists(ctx, []string{playlistID}, nil)
 	if err != nil || len(filtered) != 1 || filtered[0].ID != tracks[0].ID || filtered[0].AlbumImageURL == "" {
 		t.Fatalf("playlist-filtered tracks: %#v err=%v", filtered, err)

@@ -122,13 +122,13 @@ func (s *Service) Bootstrap(ctx context.Context) domain.Bootstrap {
 			}
 		}
 	}
-	trackCount, draftCount, err := s.store.Count(ctx)
+	_, draftCount, err := s.store.Count(ctx)
 	if err != nil {
 		return domain.Bootstrap{Error: err.Error()}
 	}
 	return domain.Bootstrap{
 		DatabaseReady: true,
-		TrackCount:    trackCount,
+		TrackCount:    len(tracks),
 		DraftCount:    draftCount,
 		Tracks:        tracks,
 		Drafts:        drafts,
@@ -138,6 +138,13 @@ func (s *Service) Bootstrap(ctx context.Context) domain.Bootstrap {
 func (s *Service) Seed(ctx context.Context) error {
 	if err := s.store.Migrate(ctx); err != nil {
 		return err
+	}
+	synced, err := s.store.SyncedPlaylists(ctx)
+	if err != nil {
+		return err
+	}
+	if len(synced) > 0 {
+		return fmt.Errorf("reference fixtures cannot be added after Spotify playlists are synced")
 	}
 	return s.store.UpsertTracks(ctx, fixtures.Tracks())
 }

@@ -126,7 +126,10 @@ SELECT t.id, t.spotify_id, t.spotify_uri, t.title, t.artist, t.album_image_url, 
        COALESCE(array_agg(DISTINCT pt.playlist_id) FILTER (WHERE pt.playlist_id IS NOT NULL), '{}')
 FROM tracks t
 LEFT JOIN playlist_tracks pt ON pt.track_id=t.id
-WHERE COALESCE(cardinality($1::text[]), 0) = 0
+WHERE (COALESCE(cardinality($1::text[]), 0) = 0 AND (
+        NOT EXISTS (SELECT 1 FROM spotify_playlists synced_playlist WHERE synced_playlist.kind <> 'draft')
+        OR EXISTS (SELECT 1 FROM playlist_tracks synced_track WHERE synced_track.track_id=t.id)
+      ))
    OR EXISTS (SELECT 1 FROM playlist_tracks selected WHERE selected.track_id=t.id AND selected.playlist_id=ANY($1::text[]))
    OR t.id=ANY($2::text[])
 GROUP BY t.id
