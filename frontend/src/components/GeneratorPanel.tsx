@@ -30,9 +30,10 @@ export function GeneratorPanel({ value, tracks, playlists, spotifyReady, busy, o
 
   return (
     <aside className="brief-panel" aria-label="Set brief">
-      <div className="brief-heading"><div><span>Set brief</span><h1>Build a set</h1></div><small>{readyCount} tracks ready</small></div>
+      <div className="brief-scroll">
+        <div className="brief-heading"><div><span>Set brief</span><h1>Build a set</h1></div><small>{readyCount} tracks ready</small></div>
 
-      <label className="control wide"><span>Name</span><input value={value.name} onChange={(event) => update('name', event.target.value)} /></label>
+        <label className="control wide"><span>Name</span><input value={value.name} onChange={(event) => update('name', event.target.value)} /></label>
 
       <div className="control-row">
         <label className="control"><span>Duration</span><select value={value.durationMinutes} onChange={(event) => update('durationMinutes', Number(event.target.value))}>
@@ -63,14 +64,17 @@ export function GeneratorPanel({ value, tracks, playlists, spotifyReady, busy, o
         {[2, 3, 4].map((count) => <button type="button" key={count} className={value.variationCount === count ? 'active' : ''} onClick={() => update('variationCount', count)}>{count}</button>)}
       </div></div>
 
-      <details className="advanced-controls">
-        <summary>Mixing preferences <ChevronDown size={14} /></summary>
-        <label className="range-control"><span>Harmonic discipline <b>{Math.round(value.harmonicStrictness * 100)}%</b></span><input type="range" min="0" max="1" step="0.01" value={value.harmonicStrictness} onChange={(event) => update('harmonicStrictness', Number(event.target.value))} /></label>
-        <label className="range-control"><span>Surprise <b>{Math.round(value.exploration * 100)}%</b></span><input type="range" min="0" max="1" step="0.01" value={value.exploration} onChange={(event) => update('exploration', Number(event.target.value))} /></label>
-      </details>
+        <details className="advanced-controls">
+          <summary>Mixing preferences <ChevronDown size={14} /></summary>
+          <label className="range-control"><span>Harmonic discipline <b>{Math.round(value.harmonicStrictness * 100)}%</b></span><input type="range" min="0" max="1" step="0.01" value={value.harmonicStrictness} onChange={(event) => update('harmonicStrictness', Number(event.target.value))} /></label>
+          <label className="range-control"><span>Surprise <b>{Math.round(value.exploration * 100)}%</b></span><input type="range" min="0" max="1" step="0.01" value={value.exploration} onChange={(event) => update('exploration', Number(event.target.value))} /></label>
+        </details>
+      </div>
 
-      <button type="button" className="generate-button" onClick={onGenerate} disabled={busy}>{busy ? <span className="loading-dot" /> : <Sparkles size={16} />}{busy ? 'Building variations…' : 'Generate set'}</button>
-      <p className="source-lock">Source playlists are read-only. Publishing always creates a new private Set Lab playlist.</p>
+      <div className="brief-actions">
+        <button type="button" className="generate-button" onClick={onGenerate} disabled={busy}>{busy ? <span className="loading-dot" /> : <Sparkles size={16} />}{busy ? 'Building variations…' : 'Generate set'}</button>
+        <p className="source-lock">Source playlists are read-only. Publishing always creates a new private Set Lab playlist.</p>
+      </div>
     </aside>
   )
 }
