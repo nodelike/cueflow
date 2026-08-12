@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "Cueflow",
+  "outputfilename": "cueflow",
+  "frontend:install": "pnpm install",
+  "frontend:build": "pnpm run build",
+  "frontend:dev:watcher": "pnpm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "kishore.gunalan",
+    "email": "108696612+nodelike@users.noreply.github.com"
+  }
+}
