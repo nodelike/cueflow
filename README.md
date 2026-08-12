@@ -25,9 +25,12 @@ The default database URL uses the current macOS user and a local database named
 ```sh
 createdb cueflow
 make migrate
-make seed
 make dev
 ```
+
+For an isolated generator demo without Spotify data, `make seed-demo` adds a
+fictional reference catalog. Cueflow rejects that command after any Spotify
+playlist has been synced, so demo tracks cannot mix into a real catalog.
 
 `make dev` launches a Wails debug build with one reload supervisor. The first
 run installs the pinned Air version into the ignored `.tools/` directory. Go

@@ -7,7 +7,7 @@ AIR_VERSION ?= v1.67.3
 TOOLS_DIR ?= $(CURDIR)/.tools
 AIR ?= $(TOOLS_DIR)/air
 
-.PHONY: dev dev-tools dev-api dev-ui bindings migrate seed spotify-auth spotify-sync enrich-import analysis-validate analysis-import test test-go test-ui test-analysis test-e2e build fmt
+.PHONY: dev dev-tools dev-api dev-ui bindings migrate seed-demo spotify-auth spotify-sync enrich-import analysis-validate analysis-import test test-go test-ui test-analysis test-e2e build fmt
 
 dev: $(AIR)
 	@echo "Starting Cueflow debug mode: Air reloads Go; Wails/Vite hot-reloads the UI."
@@ -31,7 +31,8 @@ bindings:
 migrate:
 	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/cueflow migrate
 
-seed:
+seed-demo:
+	@echo "Seeding the fictional reference catalog for isolated development only."
 	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/cueflow seed
 
 spotify-auth:
