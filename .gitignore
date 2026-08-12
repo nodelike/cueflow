@@ -11,3 +11,5 @@ coverage.out
 __pycache__/
 *.pyc
 .venv/
+.tools/
+.tmp/

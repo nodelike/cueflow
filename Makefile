@@ -3,14 +3,30 @@ PNPM ?= pnpm
 WAILS ?= wails
 PYTHON ?= python3
 DATABASE_URL ?= postgres://$(USER)@127.0.0.1:5432/cueflow?sslmode=disable
+AIR_VERSION ?= v1.67.3
+TOOLS_DIR ?= $(CURDIR)/.tools
+AIR ?= $(TOOLS_DIR)/air
 
-.PHONY: dev-api dev-ui migrate seed spotify-auth spotify-sync enrich-import analysis-validate analysis-import test test-go test-ui test-analysis test-e2e build fmt
+.PHONY: dev dev-tools dev-api dev-ui bindings migrate seed spotify-auth spotify-sync enrich-import analysis-validate analysis-import test test-go test-ui test-analysis test-e2e build fmt
+
+dev: $(AIR)
+	@echo "Starting Cueflow debug mode: Air reloads Go; Wails/Vite hot-reloads the UI."
+	DATABASE_URL='$(DATABASE_URL)' WAILS='$(WAILS)' $(AIR) -c .air.toml
+
+dev-tools: $(AIR)
+
+$(AIR):
+	@mkdir -p '$(TOOLS_DIR)'
+	GOBIN='$(TOOLS_DIR)' $(GO) install github.com/air-verse/air@$(AIR_VERSION)
 
 dev-api:
 	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/server
 
 dev-ui:
 	$(PNPM) --dir frontend dev --host 127.0.0.1
+
+bindings:
+	$(WAILS) generate module
 
 migrate:
 	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/cueflow migrate
