@@ -6,7 +6,7 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   await expect(page.getByRole('heading', { name: 'Build a set' })).toBeVisible()
   await page.getByRole('button', { name: 'Choose tracks' }).click()
   const picker = page.getByRole('dialog', { name: 'Choose must-play tracks' })
-  await picker.getByRole('searchbox', { name: 'Search tracks' }).fill('Clay Drums')
+  await picker.getByRole('searchbox', { name: 'Search tracks' }).fill('claydrums')
   await picker.getByRole('button', { name: /Clay Drums/ }).click()
   await picker.getByRole('button', { name: 'Done' }).click()
   await expect(page.getByLabel('Set brief')).toContainText('Clay Drums')

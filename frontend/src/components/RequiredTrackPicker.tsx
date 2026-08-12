@@ -8,6 +8,17 @@ type Props = {
   onChange: (ids: string[]) => void
 }
 
+// Search should follow how people remember a title, not how punctuation was
+// stored by the distributor. This folds Don't, DON’T, and dont to the same
+// value, and also makes accents, separators, and extra spaces irrelevant.
+function normalizeSearchText(value: string) {
+  return value
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '')
+}
+
 export function RequiredTrackPicker({ tracks, selectedIDs, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -23,10 +34,10 @@ export function RequiredTrackPicker({ tracks, selectedIDs, onChange }: Props) {
   }, [open])
 
   const results = useMemo(() => {
-    const needle = query.trim().toLocaleLowerCase()
+    const needle = normalizeSearchText(query)
     return tracks
       .filter((track) => !track.featureNeedsReview)
-      .filter((track) => !needle || `${track.title} ${track.artist}`.toLocaleLowerCase().includes(needle))
+      .filter((track) => !needle || normalizeSearchText(`${track.title} ${track.artist}`).includes(needle))
       .slice(0, 50)
   }, [query, tracks])
 

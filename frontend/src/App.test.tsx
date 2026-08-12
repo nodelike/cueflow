@@ -50,6 +50,23 @@ describe('Cueflow set desk', () => {
     expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ requiredTrackIds: ['two'] }))
   })
 
+  it('matches track search without caring about case, punctuation, accents, or spacing', async () => {
+    const looseMatchTrack = { ...draft.tracks[0].track, id: 'loose-match', title: "DON’T Stop", artist: 'Café Noir' }
+    bootstrap.mockResolvedValue({ ...bootstrapData, tracks: [...bootstrapData.tracks, looseMatchTrack] })
+    render(<App />)
+    await screen.findByText('Afro to pressure — A')
+    await userEvent.click(screen.getByRole('button', { name: 'Choose tracks' }))
+    const picker = screen.getByRole('dialog', { name: 'Choose must-play tracks' })
+    const search = within(picker).getByRole('searchbox', { name: 'Search tracks' })
+
+    await userEvent.type(search, 'dont')
+    expect(within(picker).getByRole('button', { name: /DON’T Stop/ })).toBeInTheDocument()
+
+    await userEvent.clear(search)
+    await userEvent.type(search, 'CAFE NOIR')
+    expect(within(picker).getByRole('button', { name: /DON’T Stop/ })).toBeInTheDocument()
+  })
+
   it('opens the provenance-aware research queue', async () => {
     needsReview.mockResolvedValue([{ ...draft.tracks[0].track, id: 'review-me', featureNeedsReview: true, bpm: 0, musicalKey: '', camelot: '' }])
     render(<App />)
