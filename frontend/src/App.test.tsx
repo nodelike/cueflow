@@ -20,7 +20,11 @@ vi.mock('./api', () => ({
 }))
 
 describe('Cueflow set desk', () => {
-  beforeEach(() => { bootstrap.mockResolvedValue(bootstrapData); generateSets.mockResolvedValue([draft]); needsReview.mockResolvedValue([]); enrichTrack.mockResolvedValue(undefined) })
+  beforeEach(() => {
+    window.localStorage.clear()
+    document.documentElement.dataset.theme = 'light'
+    bootstrap.mockResolvedValue(bootstrapData); generateSets.mockResolvedValue([draft]); needsReview.mockResolvedValue([]); enrichTrack.mockResolvedValue(undefined)
+  })
 
   it('renders the persisted set and exposes transition reasoning', async () => {
     render(<App />)
@@ -65,6 +69,17 @@ describe('Cueflow set desk', () => {
     await userEvent.clear(search)
     await userEvent.type(search, 'CAFE NOIR')
     expect(within(picker).getByRole('button', { name: /DON’T Stop/ })).toBeInTheDocument()
+  })
+
+  it('switches to the persistent dark theme with the requested accent', async () => {
+    render(<App />)
+    await screen.findByText('Afro to pressure — A')
+    await userEvent.click(screen.getByRole('button', { name: 'Use dark mode' }))
+    expect(document.documentElement.dataset.theme).toBe('dark')
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+    expect(window.localStorage.getItem('cueflow-theme')).toBe('dark')
+    expect(getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()).toBe('#DEFF00')
+    expect(screen.getByRole('button', { name: 'Use light mode' })).toBeInTheDocument()
   })
 
   it('opens the provenance-aware research queue', async () => {

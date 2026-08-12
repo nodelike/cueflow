@@ -1,1 +1,1 @@
-html { background: #f2f4f7; }
+html { background: var(--canvas, #f2f4f7); }

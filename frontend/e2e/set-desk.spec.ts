@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test'
 
+test('switches to dark mode, uses the acid accent, and remembers the choice', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Use dark mode' }).click()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  expect(await page.locator('html').evaluate((element) => getComputedStyle(element).getPropertyValue('--accent').trim())).toBe('#DEFF00')
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Use light mode' })).toBeVisible()
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+})
+
 test('generates, compares, and inspects persisted set variations', async ({ page, request }) => {
   await request.post('http://127.0.0.1:8787/api/seed')
   await page.goto('/')

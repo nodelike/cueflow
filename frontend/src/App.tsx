@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Disc3, Link2, RefreshCw, Send } from 'lucide-react'
+import { AlertCircle, Check, Disc3, Link2, Moon, RefreshCw, Send, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { bootstrap, connectSpotify, enrichTrack, generateSets, needsReview, publishSet, spotifyConnected } from './api'
 import { GeneratorPanel } from './components/GeneratorPanel'
@@ -6,6 +6,7 @@ import { MixRibbon } from './components/MixRibbon'
 import { ResearchDesk } from './components/ResearchDesk'
 import { SetInspector } from './components/SetInspector'
 import { formatDate, formatDuration } from './lib/format'
+import { getInitialTheme, saveTheme, type Theme } from './lib/theme'
 import type { Bootstrap, GenerateRequest, SetDraft, Track, TrackEnrichment } from './types'
 import './App.css'
 
@@ -27,8 +28,10 @@ function App() {
   const [published, setPublished] = useState('')
   const [view, setView] = useState<'builder' | 'research'>('builder')
   const [researchQueue, setResearchQueue] = useState<Track[]>([])
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
 
   useEffect(() => { void load() }, [])
+  useEffect(() => { saveTheme(theme) }, [theme])
 
   async function load() {
     try {
@@ -81,7 +84,7 @@ function App() {
       <header className="app-header">
         <div className="brand"><Disc3 size={19} /><strong>Cueflow</strong></div>
         <nav aria-label="Primary"><button className={view === 'builder' ? 'active' : ''} onClick={() => setView('builder')}>Set builder</button><button className={view === 'research' ? 'active' : ''} onClick={() => setView('research')}>Research {researchQueue.length > 0 && <span>{researchQueue.length}</span>}</button></nav>
-        <div className="app-status"><span className={data?.databaseReady ? 'ready' : ''}>{data?.trackCount ?? '—'} tracks</span><button type="button" disabled={busy || spotifyReady} onClick={() => void connect()}><Link2 size={13} /> {spotifyReady ? 'Spotify connected' : 'Connect Spotify'}</button><button type="button" className="icon-button" onClick={() => void load()} aria-label="Refresh"><RefreshCw size={15} /></button></div>
+        <div className="app-status"><span className={data?.databaseReady ? 'ready' : ''}>{data?.trackCount ?? '—'} tracks</span><button type="button" disabled={busy || spotifyReady} onClick={() => void connect()}><Link2 size={13} /> {spotifyReady ? 'Spotify connected' : 'Connect Spotify'}</button><button type="button" className="icon-button" onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} aria-label={`Use ${theme === 'dark' ? 'light' : 'dark'} mode`} title={`Use ${theme === 'dark' ? 'light' : 'dark'} mode`}>{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</button><button type="button" className="icon-button" onClick={() => void load()} aria-label="Refresh"><RefreshCw size={15} /></button></div>
       </header>
 
       {error && <div className="error-banner"><AlertCircle size={17} /><span>{error}</span></div>}
