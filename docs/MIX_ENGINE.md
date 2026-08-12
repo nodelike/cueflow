@@ -1,5 +1,10 @@
 # Cueflow mix-engine contract
 
+For the source-linked research audit, current-system rating, recommended audio
+architecture, evaluation program, and phased roadmap, see
+[AUTOMATED_DJ_MIXING_RESEARCH.md](AUTOMATED_DJ_MIXING_RESEARCH.md). This file
+remains the concise contract for behavior implemented in Cueflow today.
+
 Cueflow deliberately separates three claims that used to be blurred together:
 
 1. `metadata-only`: global BPM, Camelot key, energy, groove label, vocal

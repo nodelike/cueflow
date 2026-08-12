@@ -160,7 +160,10 @@ automation, evidence confidence, and risk. Otherwise the UI says
 `metadata fit`; it does not imply that audio was inspected. Temporal plans
 still require a rendered overlap check—Cueflow does not yet render, listen to,
 or master the proposed blend. See [docs/MIX_ENGINE.md](docs/MIX_ENGINE.md) for
-the scoring contract and the remaining path to production-grade mixes.
+the implemented scoring contract and
+[docs/AUTOMATED_DJ_MIXING_RESEARCH.md](docs/AUTOMATED_DJ_MIXING_RESEARCH.md) for
+the source-linked research audit, current rating, target architecture, and
+development roadmap.
 
 The set brief's **Groove palette** can isolate or deliberately combine `afro`,
 `tribal`, `house`, `tech-house`, and `techno`. Leaving every chip off searches
