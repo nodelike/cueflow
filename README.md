@@ -26,12 +26,27 @@ The default database URL uses the current macOS user and a local database named
 createdb cueflow
 make migrate
 make seed
-make dev-api
+make dev
 ```
 
-In another terminal:
+`make dev` launches a Wails debug build with one reload supervisor. The first
+run installs the pinned Air version into the ignored `.tools/` directory. Go
+changes restart the Wails debug host through Air, while React, TypeScript, and
+CSS changes use Vite HMR without restarting the desktop app. Press `Ctrl-C` to
+stop Air and all child processes.
+
+Bindings are kept stable during normal reloads so starting the app does not
+rewrite generated files. After adding or changing an exported Wails method,
+regenerate them explicitly:
 
 ```sh
+make bindings
+```
+
+For browser-only development, run the API and UI in separate terminals:
+
+```sh
+make dev-api
 make dev-ui
 ```
 
