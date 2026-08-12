@@ -52,6 +52,16 @@ type WaveformPoint struct {
 	Peak         float64 `json:"peak"`
 }
 
+// TrackWaveform is the compact, selected-track view of temporal analysis.
+// Keeping it separate from Track avoids duplicating thousands of waveform
+// buckets throughout bootstrap and persisted set-draft payloads.
+type TrackWaveform struct {
+	TrackID         string          `json:"trackId"`
+	DurationSeconds float64         `json:"durationSeconds"`
+	AnalyzerVersion string          `json:"analyzerVersion,omitempty"`
+	Waveform        []WaveformPoint `json:"waveform"`
+}
+
 type BeatMarker struct {
 	TimeSeconds float64 `json:"timeSeconds"`
 	BeatInBar   int     `json:"beatInBar"`

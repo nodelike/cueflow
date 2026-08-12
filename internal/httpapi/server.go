@@ -33,6 +33,7 @@ func New(svc *service.Service, logger *slog.Logger) http.Handler {
 	router.Post("/api/spotify/playlists/sync", server.syncSpotifyPlaylists)
 	router.Post("/api/sets/{id}/publish", server.publish)
 	router.Get("/api/research/queue", server.researchQueue)
+	router.Get("/api/tracks/{id}/waveform", server.trackWaveform)
 	router.Put("/api/tracks/{id}/enrichment", server.enrichTrack)
 	return router
 }
@@ -86,6 +87,15 @@ func (s *Server) enrichTrack(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 	writer.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) trackWaveform(writer http.ResponseWriter, request *http.Request) {
+	waveform, err := s.service.TrackWaveform(request.Context(), chi.URLParam(request, "id"))
+	if err != nil {
+		writeError(writer, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(writer, http.StatusOK, waveform)
 }
 
 func (s *Server) spotifyStatus(writer http.ResponseWriter, request *http.Request) {

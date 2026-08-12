@@ -22,3 +22,5 @@ export function SpotifyConnected():Promise<boolean>;
 export function SpotifyPlaylists():Promise<Array<spotify.Playlist>>;
 
 export function SyncSpotifyPlaylists(arg1:Array<string>):Promise<domain.Bootstrap>;
+
+export function TrackWaveform(arg1:string):Promise<domain.TrackWaveform>;

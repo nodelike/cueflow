@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"cueflow/internal/domain"
 	"cueflow/internal/fixtures"
@@ -170,4 +171,22 @@ func (s *Service) EnrichTrack(ctx context.Context, input domain.TrackEnrichment)
 
 func (s *Service) NeedsReview(ctx context.Context, limit int) ([]domain.Track, error) {
 	return s.store.ListNeedsReview(ctx, limit)
+}
+
+func (s *Service) TrackWaveform(ctx context.Context, trackID string) (domain.TrackWaveform, error) {
+	trackID = strings.TrimSpace(trackID)
+	if trackID == "" {
+		return domain.TrackWaveform{}, fmt.Errorf("track ID is required")
+	}
+	analyses, err := s.store.LatestTrackAnalyses(ctx, []string{trackID})
+	if err != nil {
+		return domain.TrackWaveform{}, err
+	}
+	overview := domain.TrackWaveform{TrackID: trackID, Waveform: []domain.WaveformPoint{}}
+	if analysis, ok := analyses[trackID]; ok {
+		overview.DurationSeconds = analysis.DurationSeconds
+		overview.AnalyzerVersion = analysis.AnalyzerVersion
+		overview.Waveform = analysis.Waveform
+	}
+	return overview, nil
 }

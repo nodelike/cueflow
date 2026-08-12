@@ -133,3 +133,10 @@ func (a *App) EnrichTrack(input domain.TrackEnrichment) error {
 	}
 	return a.service.EnrichTrack(a.ctx, input)
 }
+
+func (a *App) TrackWaveform(trackID string) (domain.TrackWaveform, error) {
+	if a.service == nil {
+		return domain.TrackWaveform{}, fmt.Errorf("Cueflow is not ready")
+	}
+	return a.service.TrackWaveform(a.ctx, trackID)
+}

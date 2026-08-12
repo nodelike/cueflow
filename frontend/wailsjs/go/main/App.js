@@ -41,3 +41,7 @@ export function SpotifyPlaylists() {
 export function SyncSpotifyPlaylists(arg1) {
   return window['go']['main']['App']['SyncSpotifyPlaylists'](arg1);
 }
+
+export function TrackWaveform(arg1) {
+  return window['go']['main']['App']['TrackWaveform'](arg1);
+}
