@@ -25,6 +25,21 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   await page.getByRole('button', { name: 'Generate set' }).click()
   await expect(page.getByText('Afro to pressure — A')).toBeVisible()
   await expect(page.getByRole('tab')).toHaveCount(3)
+  expect(await page.evaluate(() => ({ scrollY: window.scrollY, bodyOverflow: getComputedStyle(document.body).overflow }))).toEqual({ scrollY: 0, bodyOverflow: 'hidden' })
+  const ledgerScroll = page.getByLabel('Set track list').locator('.ledger-scroll')
+  const scrollContract = await ledgerScroll.evaluate((element) => {
+    const style = getComputedStyle(element)
+    const initialTop = element.scrollTop
+    element.scrollTop = element.scrollHeight
+    return {
+      isolated: element.scrollHeight > element.clientHeight && element.scrollTop > initialTop,
+      overscroll: style.overscrollBehaviorY,
+      scrollbar: style.scrollbarWidth,
+      windowScrollY: window.scrollY,
+    }
+  })
+  expect(scrollContract).toEqual({ isolated: true, overscroll: 'contain', scrollbar: 'none', windowScrollY: 0 })
+  await expect(page.getByLabel('Track and transition inspector')).toHaveCSS('position', 'static')
   const timeline = page.getByLabel(/mix timeline/i)
   await expect(timeline).toBeVisible()
   const tracks = timeline.getByRole('button')
