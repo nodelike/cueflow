@@ -6,6 +6,7 @@ import { MixRibbon } from './components/MixRibbon'
 import { ResearchDesk } from './components/ResearchDesk'
 import { SetInspector } from './components/SetInspector'
 import { formatDate, formatDuration } from './lib/format'
+import { getSavedRequiredTrackIDs, saveRequiredTrackIDs } from './lib/preferences'
 import { getInitialTheme, saveTheme, type Theme } from './lib/theme'
 import type { Bootstrap, GenerateRequest, SetDraft, Track, TrackEnrichment } from './types'
 import './App.css'
@@ -21,7 +22,7 @@ function App() {
   const [drafts, setDrafts] = useState<SetDraft[]>([])
   const [selectedDraft, setSelectedDraft] = useState(0)
   const [selectedPosition, setSelectedPosition] = useState(1)
-  const [request, setRequest] = useState(initialRequest)
+  const [request, setRequest] = useState<GenerateRequest>(() => ({ ...initialRequest, requiredTrackIds: getSavedRequiredTrackIDs() }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [spotifyReady, setSpotifyReady] = useState(false)
@@ -32,6 +33,7 @@ function App() {
 
   useEffect(() => { void load() }, [])
   useEffect(() => { saveTheme(theme) }, [theme])
+  useEffect(() => { saveRequiredTrackIDs(request.requiredTrackIds) }, [request.requiredTrackIds])
 
   async function load() {
     try {

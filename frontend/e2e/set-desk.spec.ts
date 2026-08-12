@@ -20,6 +20,8 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   await picker.getByRole('button', { name: /Clay Drums/ }).click()
   await picker.getByRole('button', { name: 'Done' }).click()
   await expect(page.getByLabel('Set brief')).toContainText('Clay Drums')
+  await page.reload()
+  await expect(page.getByLabel('Set brief')).toContainText('Clay Drums')
   await page.getByRole('button', { name: 'Generate set' }).click()
   await expect(page.getByText('Afro to pressure — A')).toBeVisible()
   await expect(page.getByRole('tab')).toHaveCount(3)

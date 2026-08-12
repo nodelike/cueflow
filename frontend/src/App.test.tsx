@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -41,8 +41,8 @@ describe('Cueflow set desk', () => {
     expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ arc: 'journey', durationMinutes: 60, variationCount: 3 }))
   })
 
-  it('searches and requires must-play tracks in every generated variation', async () => {
-    render(<App />)
+  it('searches, requires, and restores must-play tracks after a restart', async () => {
+    const firstRun = render(<App />)
     await screen.findByText('Afro to pressure — A')
     await userEvent.click(screen.getByRole('button', { name: 'Choose tracks' }))
     const picker = screen.getByRole('dialog', { name: 'Choose must-play tracks' })
@@ -50,8 +50,14 @@ describe('Cueflow set desk', () => {
     await userEvent.click(within(picker).getByRole('button', { name: /Clay Drums/ }))
     await userEvent.click(within(picker).getByRole('button', { name: 'Done' }))
     expect(within(screen.getByLabelText('Set brief')).getByText('Clay Drums')).toBeInTheDocument()
+    await waitFor(() => expect(window.localStorage.getItem('cueflow-required-track-ids')).toBe('["two"]'))
     await userEvent.click(screen.getByRole('button', { name: 'Generate set' }))
     expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ requiredTrackIds: ['two'] }))
+
+    firstRun.unmount()
+    render(<App />)
+    await screen.findByText('Afro to pressure — A')
+    expect(within(screen.getByLabelText('Set brief')).getByText('Clay Drums')).toBeInTheDocument()
   })
 
   it('matches track search without caring about case, punctuation, accents, or spacing', async () => {
