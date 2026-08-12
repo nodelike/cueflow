@@ -40,6 +40,19 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   })
   expect(scrollContract).toEqual({ isolated: true, overscroll: 'contain', scrollbar: 'none', windowScrollY: 0 })
   await expect(page.getByLabel('Track and transition inspector')).toHaveCSS('position', 'static')
+  const readability = await page.evaluate(() => {
+    const fontSize = (selector: string) => Number.parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize)
+    return {
+      control: fontSize('.control input'),
+      sectionLabel: fontSize('.section-label > span'),
+      trackTitle: fontSize('.ledger-scroll > button strong'),
+      trackArtist: fontSize('.ledger-scroll > button small'),
+      inspectorTitle: fontSize('.track-inspector h2'),
+      primaryAction: fontSize('.generate-button'),
+      trackRowHeight: document.querySelector('.ledger-scroll > button')!.getBoundingClientRect().height,
+    }
+  })
+  expect(readability).toEqual({ control: 13, sectionLabel: 10, trackTitle: 12, trackArtist: 10, inspectorTitle: 20, primaryAction: 13, trackRowHeight: 52 })
   const timeline = page.getByLabel(/mix timeline/i)
   await expect(timeline).toBeVisible()
   const tracks = timeline.getByRole('button')
