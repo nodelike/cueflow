@@ -15,8 +15,9 @@ export function SetInspector({ item }: { item?: SetTrack }) {
         <div><dt>Groove</dt><dd>{item.track.groove}</dd></div>
       </dl>
       {item.position > 1 && <section className="transition-detail">
-        <div className="transition-heading"><span><ArrowRight size={14} /> Transition in · {item.transition.basis === 'metadata-only' ? 'metadata fit' : item.transition.basis || 'legacy score'}</span><strong title={`${item.transition.risk || 'unknown'} risk · ${Math.round(item.transition.confidence * 100)}% confidence`}>{Math.round(item.transition.score * 100)}</strong></div>
+        <div className="transition-heading"><span><ArrowRight size={14} /> Transition in · {item.transition.basis === 'metadata-only' ? 'metadata fit' : item.transition.basis === 'temporal' ? 'cue-window plan' : item.transition.basis || 'legacy score'}</span><strong title={`${item.transition.risk || 'unknown'} risk · ${Math.round(item.transition.confidence * 100)}% confidence`}>{Math.round(item.transition.score * 100)}</strong></div>
         <p>{item.transition.summary}</p>
+        {item.transition.plan && <p><strong>{item.transition.plan.bars}-bar {item.transition.plan.style}</strong> · {item.transition.plan.fromCueId} → {item.transition.plan.toCueId} · bass exchange at bar {item.transition.plan.bassSwapBar}{item.transition.plan.renderValidationRequired ? ' · render check required' : ''}</p>}
         <div className="transition-components">{item.transition.components.map((component) => <div key={component.name}>
           <span>{component.name}</span><i><b style={{ width: `${component.score * 100}%` }} /></i><strong>{Math.round(component.score * 100)}</strong><small>{component.note}</small>
         </div>)}</div>

@@ -37,8 +37,9 @@ describe('Cueflow set desk', () => {
     expect(await screen.findByText('Afro to pressure — A')).toBeInTheDocument()
     expect(screen.getByText('heuristic fit')).toBeInTheDocument()
     await userEvent.click(within(screen.getByLabelText('Set track list')).getByRole('button', { name: /2\. Clay Drums/ }))
-    expect(screen.getByText(/beat-grid validation is still pending/i)).toBeInTheDocument()
-    expect(screen.getByText(/Transition in · metadata fit/i)).toBeInTheDocument()
+    expect(screen.getByText(/rendered-audio validation is still required/i)).toBeInTheDocument()
+    expect(screen.getByText(/Transition in · cue-window plan/i)).toBeInTheDocument()
+    expect(screen.getByText(/bass exchange at bar 8/i)).toBeInTheDocument()
     expect(screen.getByText('adjacent Camelot movement')).toBeInTheDocument()
   })
 

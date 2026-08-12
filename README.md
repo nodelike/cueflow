@@ -107,10 +107,52 @@ make enrich-import FILE="$PWD/research/enrichment.csv"
 the independent inputs. A public catalog tag can resolve a conflict, but it
 never replaces structural audio analysis by itself.
 
+### Full-track waveform and cue analysis
+
+Preview research does **not** unlock cue-aware transition scoring. To analyze
+recordings you are authorized to use, create a manifest containing the exact
+catalog ID and a local full-track audio path:
+
+```json
+{
+  "tracks": [
+    {"trackId": "spotify-track-id", "path": "/absolute/path/to/recording.wav"}
+  ]
+}
+```
+
+Run the full-file analyzer, validate its versioned JSON without touching the
+database, then import it atomically:
+
+```sh
+.venv/bin/python scripts/analyze_tracks.py manifest.json track-analysis.json
+make analysis-validate FILE="$PWD/track-analysis.json"
+make analysis-import FILE="$PWD/track-analysis.json"
+```
+
+The analyzer fingerprints the source file and emits a downsampled RMS/peak
+waveform envelope, beat/downbeat estimates, structural sections, two-second
+STFT/loudness/band/percussive/vocal-likelihood/chroma frames, and ranked
+16-bar cue candidates. The database checks the measured duration against the
+catalog (2% or three seconds, whichever is greater), so a 30-second preview
+cannot masquerade as full-track temporal evidence. Reusing the same
+track/fingerprint/analyzer identity with different evidence is rejected.
+
+When both sides of an edge have valid temporal analysis, set generation scores
+actual exit/entry windows and stores a versioned transition plan with cue
+times, style, phrase length, tempo adjustment, bass-swap bar, gain/EQ/crossfader
+automation, evidence confidence, and risk. Otherwise the UI says
+`metadata fit`; it does not imply that audio was inspected. Temporal plans
+still require a rendered overlap check—Cueflow does not yet render, listen to,
+or master the proposed blend. See [docs/MIX_ENGINE.md](docs/MIX_ENGINE.md) for
+the scoring contract and the remaining path to production-grade mixes.
+
 The set brief's **Groove palette** can isolate or deliberately combine `afro`,
 `tribal`, `house`, `tech-house`, and `techno`. Leaving every chip off searches
-the whole catalog. BPM endpoints are optimized across the full curve, while
-transition tempo flow still penalizes abrupt beat-grid jumps.
+the whole catalog. BPM endpoints are optimized across elapsed set time. Tempo
+compatibility uses relative percentage change with explicit half/double-time
+handling; temporal plans still require beat-grid and time-stretch validation
+on a render.
 
 To use an isolated PostgreSQL container instead:
 

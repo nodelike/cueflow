@@ -1,14 +1,125 @@
 export namespace domain {
-	
+
+	export class AutomationPoint {
+	    bar: number;
+	    value: number;
+
+	    static createFrom(source: any = {}) {
+	        return new AutomationPoint(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.bar = source["bar"];
+	        this.value = source["value"];
+	    }
+	}
+	export class AutomationLane {
+	    target: string;
+	    points: AutomationPoint[];
+
+	    static createFrom(source: any = {}) {
+	        return new AutomationLane(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.target = source["target"];
+	        this.points = this.convertValues(source["points"], AutomationPoint);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+	export class TransitionPlan {
+	    version: string;
+	    fromCueId: string;
+	    toCueId: string;
+	    style: string;
+	    bars: number;
+	    fromStartSeconds: number;
+	    fromEndSeconds: number;
+	    toStartSeconds: number;
+	    toEndSeconds: number;
+	    tempoAdjustmentPct: number;
+	    bassSwapBar: number;
+	    score: number;
+	    risk: string;
+	    confidence: number;
+	    components: ScoreComponent[];
+	    automation: AutomationLane[];
+	    notes: string[];
+	    renderValidationRequired: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new TransitionPlan(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.version = source["version"];
+	        this.fromCueId = source["fromCueId"];
+	        this.toCueId = source["toCueId"];
+	        this.style = source["style"];
+	        this.bars = source["bars"];
+	        this.fromStartSeconds = source["fromStartSeconds"];
+	        this.fromEndSeconds = source["fromEndSeconds"];
+	        this.toStartSeconds = source["toStartSeconds"];
+	        this.toEndSeconds = source["toEndSeconds"];
+	        this.tempoAdjustmentPct = source["tempoAdjustmentPct"];
+	        this.bassSwapBar = source["bassSwapBar"];
+	        this.score = source["score"];
+	        this.risk = source["risk"];
+	        this.confidence = source["confidence"];
+	        this.components = this.convertValues(source["components"], ScoreComponent);
+	        this.automation = this.convertValues(source["automation"], AutomationLane);
+	        this.notes = source["notes"];
+	        this.renderValidationRequired = source["renderValidationRequired"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class ScoreComponent {
 	    name: string;
 	    score: number;
 	    note: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ScoreComponent(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -27,11 +138,12 @@ export namespace domain {
 	    confidence: number;
 	    summary: string;
 	    components: ScoreComponent[];
-	
+	    plan?: TransitionPlan;
+
 	    static createFrom(source: any = {}) {
 	        return new Transition(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.fromTrackId = source["fromTrackId"];
@@ -44,8 +156,9 @@ export namespace domain {
 	        this.confidence = source["confidence"];
 	        this.summary = source["summary"];
 	        this.components = this.convertValues(source["components"], ScoreComponent);
+	        this.plan = this.convertValues(source["plan"], TransitionPlan);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -69,11 +182,11 @@ export namespace domain {
 	    track: Track;
 	    targetEnergy: number;
 	    transition: Transition;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new SetTrack(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.position = source["position"];
@@ -81,7 +194,7 @@ export namespace domain {
 	        this.targetEnergy = source["targetEnergy"];
 	        this.transition = this.convertValues(source["transition"], Transition);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -118,14 +231,16 @@ export namespace domain {
 	    weakestTransition: number;
 	    highRiskTransitions: number;
 	    analysisConfidence: number;
+	    temporalCoverage: number;
+	    temporalConfidence: number;
 	    // Go type: time
 	    createdAt: any;
 	    tracks: SetTrack[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new SetDraft(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -145,10 +260,12 @@ export namespace domain {
 	        this.weakestTransition = source["weakestTransition"];
 	        this.highRiskTransitions = source["highRiskTransitions"];
 	        this.analysisConfidence = source["analysisConfidence"];
+	        this.temporalCoverage = source["temporalCoverage"];
+	        this.temporalConfidence = source["temporalConfidence"];
 	        this.createdAt = this.convertValues(source["createdAt"], null);
 	        this.tracks = this.convertValues(source["tracks"], SetTrack);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -189,11 +306,11 @@ export namespace domain {
 	    featureConfidence: number;
 	    featureProvenance: string;
 	    featureNeedsReview: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Track(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -217,7 +334,7 @@ export namespace domain {
 	        this.featureProvenance = source["featureProvenance"];
 	        this.featureNeedsReview = source["featureNeedsReview"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -243,11 +360,11 @@ export namespace domain {
 	    tracks: Track[];
 	    drafts: SetDraft[];
 	    error?: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Bootstrap(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.databaseReady = source["databaseReady"];
@@ -257,7 +374,7 @@ export namespace domain {
 	        this.drafts = this.convertValues(source["drafts"], SetDraft);
 	        this.error = source["error"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -290,11 +407,11 @@ export namespace domain {
 	    requiredTrackIds?: string[];
 	    excludedTrackIds?: string[];
 	    seed: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new GenerateRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -312,10 +429,10 @@ export namespace domain {
 	        this.seed = source["seed"];
 	    }
 	}
-	
-	
-	
-	
+
+
+
+
 	export class TrackEnrichment {
 	    trackId: string;
 	    bpm: number;
@@ -327,11 +444,11 @@ export namespace domain {
 	    role: string;
 	    source: string;
 	    confidence: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TrackEnrichment(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.trackId = source["trackId"];
@@ -347,10 +464,11 @@ export namespace domain {
 	    }
 	}
 
+
 }
 
 export namespace spotify {
-	
+
 	export class Playlist {
 	    ID: string;
 	    Name: string;
@@ -359,11 +477,11 @@ export namespace spotify {
 	    ImageURL: string;
 	    TrackCount: number;
 	    Synced: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Playlist(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.ID = source["ID"];

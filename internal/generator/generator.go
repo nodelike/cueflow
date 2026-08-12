@@ -43,6 +43,10 @@ type candidate struct {
 }
 
 func (g *Generator) Generate(catalog []domain.Track, input domain.GenerateRequest) ([]domain.SetDraft, error) {
+	return g.GenerateWithAnalyses(catalog, nil, input)
+}
+
+func (g *Generator) GenerateWithAnalyses(catalog []domain.Track, analyses map[string]domain.TrackAnalysis, input domain.GenerateRequest) ([]domain.SetDraft, error) {
 	req := input.WithDefaults()
 	if len(catalog) < 3 {
 		return nil, fmt.Errorf("at least three tracks are required")
@@ -52,6 +56,14 @@ func (g *Generator) Generate(catalog []domain.Track, input domain.GenerateReques
 	}
 	if req.HarmonicStrictness < 0 || req.HarmonicStrictness > 1 || req.Exploration < 0 || req.Exploration > 1 {
 		return nil, fmt.Errorf("strictness and exploration must be between 0 and 1")
+	}
+	for trackID, analysis := range analyses {
+		if analysis.TrackID != trackID {
+			return nil, fmt.Errorf("temporal analysis map key %q contains track %q", trackID, analysis.TrackID)
+		}
+		if err := analysis.Validate(); err != nil {
+			return nil, fmt.Errorf("temporal analysis for track %q: %w", trackID, err)
+		}
 	}
 
 	excluded := makeSet(req.ExcludedTrackIDs)
@@ -80,10 +92,11 @@ func (g *Generator) Generate(catalog []domain.Track, input domain.GenerateReques
 	}
 	usedEdges := map[string]int{}
 	usedTracks := map[string]int{}
+	transitionCache := map[string]domain.Transition{}
 	sessionID := uuid.NewString()
 	drafts := make([]domain.SetDraft, 0, req.VariationCount)
 	for variation := 1; variation <= req.VariationCount; variation++ {
-		draft, err := g.generateOne(pool, req, required, usedEdges, usedTracks, seed+int64(variation*7919), variation, sessionID)
+		draft, err := g.generateOne(pool, analyses, req, required, usedEdges, usedTracks, transitionCache, seed+int64(variation*7919), variation, sessionID)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +111,7 @@ func (g *Generator) Generate(catalog []domain.Track, input domain.GenerateReques
 	return drafts, nil
 }
 
-func (g *Generator) generateOne(pool []domain.Track, req domain.GenerateRequest, required map[string]bool, usedEdges, usedTracks map[string]int, seed int64, variation int, sessionID string) (domain.SetDraft, error) {
+func (g *Generator) generateOne(pool []domain.Track, analyses map[string]domain.TrackAnalysis, req domain.GenerateRequest, required map[string]bool, usedEdges, usedTracks map[string]int, transitionCache map[string]domain.Transition, seed int64, variation int, sessionID string) (domain.SetDraft, error) {
 	avgDuration := 0
 	for _, track := range pool {
 		avgDuration += track.DurationSeconds
@@ -122,7 +135,7 @@ func (g *Generator) generateOne(pool []domain.Track, req domain.GenerateRequest,
 				continue
 			}
 			progress := clamp01(float64(state.duration) / float64(targetSeconds))
-			candidates := g.rankCandidates(state, pool, req, required, usedEdges, usedTracks, progress, rng)
+			candidates := g.rankCandidates(state, pool, analyses, req, required, usedEdges, usedTracks, transitionCache, progress, rng)
 			for _, item := range candidates[:min(branchWidth, len(candidates))] {
 				used := cloneSet(state.used)
 				used[item.track.ID] = true
@@ -189,7 +202,7 @@ func openerStates(pool []domain.Track, req domain.GenerateRequest, usedTracks ma
 	return states
 }
 
-func (g *Generator) rankCandidates(state beamState, pool []domain.Track, req domain.GenerateRequest, required map[string]bool, usedEdges, usedTracks map[string]int, progress float64, rng *rand.Rand) []candidate {
+func (g *Generator) rankCandidates(state beamState, pool []domain.Track, analyses map[string]domain.TrackAnalysis, req domain.GenerateRequest, required map[string]bool, usedEdges, usedTracks map[string]int, transitionCache map[string]domain.Transition, progress float64, rng *rand.Rand) []candidate {
 	from := state.tracks[len(state.tracks)-1]
 	target := targetEnergy(req.Arc, progress)
 	targetBPM := interpolatedBPM(req, progress)
@@ -198,7 +211,12 @@ func (g *Generator) rankCandidates(state beamState, pool []domain.Track, req dom
 		if state.used[track.ID] {
 			continue
 		}
-		transition := scoreTransition(from, track, req.HarmonicStrictness)
+		key := edgeKey(from.ID, track.ID)
+		transition, cached := transitionCache[key]
+		if !cached {
+			transition = scoreTransitionWithAnalyses(from, track, analyses, req.HarmonicStrictness)
+			transitionCache[key] = transition
+		}
 		energyFit := clamp01(1 - math.Abs(track.Energy-target)*1.45)
 		bpmFit := .7
 		if targetBPM > 0 {
@@ -219,7 +237,7 @@ func (g *Generator) rankCandidates(state beamState, pool []domain.Track, req dom
 		if recentArtist(state.tracks, track.Artist, 4) {
 			score -= .24
 		}
-		score -= float64(usedEdges[edgeKey(from.ID, track.ID)]) * (.16 + req.Exploration*.08)
+		score -= float64(usedEdges[key]) * (.16 + req.Exploration*.08)
 		score -= float64(usedTracks[track.ID]) * (.1 + req.Exploration*.05)
 		score += (rng.Float64() - .5) * req.Exploration * .22
 		items = append(items, candidate{track: track, transition: transition, score: score})
@@ -382,6 +400,12 @@ func buildDraft(state beamState, req domain.GenerateRequest, variation int, sess
 	durationFit := clamp01(1 - math.Abs(float64(state.duration-targetSeconds))/float64(targetSeconds)*2)
 	transitionSafety, weakestTransition, highRiskTransitions := transitionSafetyStats(state.transitions)
 	analysisConfidence := averageTrackConfidence(state.tracks)
+	temporalCoverage := temporalCoverage(state.transitions)
+	temporalConfidence := temporalConfidence(state.transitions)
+	version := scoreVersion
+	if temporalCoverage > 0 {
+		version += "+" + domain.TransitionPlanVersion
+	}
 	quality := 100 * (energyFit*.20 + tempo*.15 + harmony*.12 + diversity*.08 + durationFit*.15 + endingScore(state.tracks)*.08 + transitionSafety*.17 + analysisConfidence*.05)
 	if highRiskTransitions > 0 {
 		quality = math.Min(quality, math.Max(58, 74-float64(highRiskTransitions-1)*4))
@@ -395,7 +419,7 @@ func buildDraft(state beamState, req domain.GenerateRequest, variation int, sess
 		DurationSeconds:     state.duration,
 		DurationBasis:       "full-track-sum",
 		QualityScore:        round(quality, 1),
-		ScoreVersion:        scoreVersion,
+		ScoreVersion:        version,
 		EnergyFit:           round(energyFit*100, 1),
 		HarmonicFlow:        round(harmony*100, 1),
 		TempoFlow:           round(tempo*100, 1),
@@ -404,6 +428,8 @@ func buildDraft(state beamState, req domain.GenerateRequest, variation int, sess
 		WeakestTransition:   round(weakestTransition*100, 1),
 		HighRiskTransitions: highRiskTransitions,
 		AnalysisConfidence:  round(analysisConfidence*100, 1),
+		TemporalCoverage:    round(temporalCoverage*100, 1),
+		TemporalConfidence:  round(temporalConfidence*100, 1),
 		CreatedAt:           time.Now().UTC(),
 		Tracks:              tracks,
 	}

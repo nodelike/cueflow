@@ -112,7 +112,7 @@ function App() {
           <section className="set-canvas">
             {!activeDraft ? <div className="empty-set"><Disc3 size={28} /><h2>No set yet</h2><p>Choose your constraints, add any must-play tracks, then generate a few directions.</p></div> : <div className="set-workspace">
               <header className="set-header">
-                <div><span>{activeDraft.arc} · {formatDuration(activeDraft.durationSeconds)} · {activeDraft.tracks.length} tracks</span><h1>{activeDraft.name}</h1><p>Generated {formatDate(activeDraft.createdAt)}</p></div>
+                <div><span>{activeDraft.arc} · {formatDuration(activeDraft.durationSeconds)} · {activeDraft.tracks.length} tracks</span><h1>{activeDraft.name}</h1><p>Generated {formatDate(activeDraft.createdAt)} · {activeDraft.temporalCoverage > 0 ? `${Math.round(activeDraft.temporalCoverage)}% cue-window coverage at ${Math.round(activeDraft.temporalConfidence)}% confidence` : 'metadata-only transition evidence'}</p></div>
                 <div className="set-actions"><div className="quality" title="Metadata-based heuristic fit; this is not a rendered-audio quality score"><strong>{activeDraft.qualityScore}</strong><span>heuristic fit</span></div><button type="button" disabled={!spotifyReady || busy} onClick={() => void publish()}><Send size={14} /> Publish</button></div>
               </header>
 

@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"time"
 
 	"cueflow/internal/domain"
 	"cueflow/internal/fixtures"
@@ -204,6 +205,119 @@ func TestGenerateRejectsGrossDurationMiss(t *testing.T) {
 	_, err := New().Generate(tracks, domain.GenerateRequest{Name: "Too short", DurationMinutes: 15, VariationCount: 1})
 	if err == nil || !strings.Contains(err.Error(), "within 10%") {
 		t.Fatalf("expected an honest duration failure, got %v", err)
+	}
+}
+
+func TestTemporalAnalysisProducesExecutableCuePlan(t *testing.T) {
+	from := domain.Track{ID: "from", DurationSeconds: 300, BPM: 124, Camelot: "8A", Groove: "house", Energy: .6, Vocal: .1, FeatureConfidence: .95}
+	to := domain.Track{ID: "to", DurationSeconds: 300, BPM: 125, Camelot: "9A", Groove: "house", Energy: .64, Vocal: .1, FeatureConfidence: .95}
+	analyses := map[string]domain.TrackAnalysis{
+		from.ID: temporalAnalysisFixture(from, 124),
+		to.ID:   temporalAnalysisFixture(to, 125),
+	}
+
+	transition := scoreTransitionWithAnalyses(from, to, analyses, .8)
+	if transition.Basis != "temporal" || transition.Plan == nil {
+		t.Fatalf("temporal evidence did not produce a cue plan: %#v", transition)
+	}
+	if transition.Plan.Version != domain.TransitionPlanVersion || !transition.Plan.RenderValidationRequired {
+		t.Fatalf("plan lacks version/render gate: %#v", transition.Plan)
+	}
+	if transition.Plan.FromCueID != "from-out" || transition.Plan.ToCueID != "to-in" || transition.Plan.Bars != 16 {
+		t.Fatalf("wrong cue pair selected: %#v", transition.Plan)
+	}
+	if len(transition.Plan.Automation) < 4 || !strings.Contains(transition.Summary, "rendered-audio validation") {
+		t.Fatalf("plan is not executable or overclaims validation: %#v", transition.Plan)
+	}
+	if componentScore(transition.Plan.Components, "cue headroom") <= 0 {
+		t.Fatalf("waveform-derived peak headroom was not scored: %#v", transition.Plan.Components)
+	}
+	metadataConflict := to
+	metadataConflict.BPM = 150
+	if conflict := scoreTransitionWithAnalyses(from, metadataConflict, analyses, .8); conflict.Risk != "high" {
+		t.Fatalf("temporal evidence improperly downgraded a high-risk metadata conflict: %#v", conflict)
+	}
+	if fallback := scoreTransitionWithAnalyses(from, to, map[string]domain.TrackAnalysis{from.ID: analyses[from.ID]}, .8); fallback.Basis != "metadata-only" || fallback.Plan != nil {
+		t.Fatalf("one-sided analysis was presented as temporal evidence: %#v", fallback)
+	}
+}
+
+func TestTransitionPlanStyleRespondsToLocalWindowConflicts(t *testing.T) {
+	track := domain.Track{ID: "style", DurationSeconds: 300, BPM: 124}
+	analysis := temporalAnalysisFixture(track, 124)
+	outgoing, incoming := analysis.CueCandidates[1], analysis.CueCandidates[0]
+
+	vocalOut, vocalIn := outgoing, incoming
+	vocalOut.Metrics.VocalProbability, vocalIn.Metrics.VocalProbability = .9, .9
+	if plan := buildTransitionPlan(analysis, analysis, vocalOut, vocalIn); plan.Style != "echo-out" {
+		t.Fatalf("vocal collision selected %q instead of echo-out", plan.Style)
+	}
+
+	bassOut, bassIn := outgoing, incoming
+	bassOut.Metrics.LowEnergy, bassIn.Metrics.LowEnergy = .9, .9
+	bassOut.Metrics.VocalProbability, bassIn.Metrics.VocalProbability = .05, .05
+	if plan := buildTransitionPlan(analysis, analysis, bassOut, bassIn); plan.Style != "bass-swap" {
+		t.Fatalf("bass collision selected %q instead of bass-swap", plan.Style)
+	}
+
+	dropIn := incoming
+	dropIn.Kind = domain.CueKindDrop
+	if plan := buildTransitionPlan(analysis, analysis, outgoing, dropIn); plan.Style != "drop-swap" {
+		t.Fatalf("clean drop entry selected %q instead of drop-swap", plan.Style)
+	}
+
+	clippedOut, clippedIn := outgoing, incoming
+	clippedOut.Metrics.Peak, clippedIn.Metrics.Peak = 1, 1
+	if plan := buildTransitionPlan(analysis, analysis, clippedOut, clippedIn); plan.Risk != "high" || componentScore(plan.Components, "cue headroom") >= .3 {
+		t.Fatalf("predicted waveform-peak collision was not high risk: %#v", plan)
+	}
+}
+
+func TestGenerateReportsTemporalCoverage(t *testing.T) {
+	catalog := fixtures.Tracks()
+	analyses := make(map[string]domain.TrackAnalysis, len(catalog))
+	for _, track := range catalog {
+		analyses[track.ID] = temporalAnalysisFixture(track, track.BPM)
+	}
+	drafts, err := New().GenerateWithAnalyses(catalog, analyses, domain.GenerateRequest{
+		Name: "Temporal", DurationMinutes: 15, VariationCount: 1, Arc: "journey", StartBPM: 118, EndBPM: 125, Seed: 44,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if drafts[0].TemporalCoverage != 100 || drafts[0].TemporalConfidence != 90 || !strings.Contains(drafts[0].ScoreVersion, domain.TransitionPlanVersion) {
+		t.Fatalf("draft did not disclose temporal evidence: coverage=%.1f confidence=%.1f version=%q", drafts[0].TemporalCoverage, drafts[0].TemporalConfidence, drafts[0].ScoreVersion)
+	}
+	for _, item := range drafts[0].Tracks[1:] {
+		if item.Transition.Basis != "temporal" || item.Transition.Plan == nil {
+			t.Fatalf("track %d fell back to metadata despite full coverage", item.Position)
+		}
+	}
+}
+
+func temporalAnalysisFixture(track domain.Track, tempo float64) domain.TrackAnalysis {
+	duration := float64(track.DurationSeconds)
+	metrics := domain.CueWindowMetrics{
+		LoudnessLUFS: -11, Peak: .72, LowEnergy: .42, MidEnergy: .5, HighEnergy: .3,
+		PercussiveStrength: .78, VocalProbability: .12, TonalStrength: .4,
+		Chroma: []float64{1, .1, 0, 0, .3, 0, 0, .5, 0, 0, 0, 0},
+	}
+	return domain.TrackAnalysis{
+		SchemaVersion: domain.TemporalAnalysisSchemaVersion, TrackID: track.ID,
+		AudioFingerprint: "sha256:" + track.ID, AnalyzerVersion: "test-analyzer/1",
+		DurationSeconds: duration, SampleRate: 44100, Channels: 2, TempoBPM: tempo, TempoConfidence: .94,
+		Waveform: []domain.WaveformPoint{{StartSeconds: 0, EndSeconds: duration, RMS: .24, Peak: .72}},
+		Beats: []domain.BeatMarker{
+			{TimeSeconds: 0, BeatInBar: 1, BarIndex: 0, Confidence: .95},
+			{TimeSeconds: .5, BeatInBar: 2, BarIndex: 0, Confidence: .95},
+		},
+		Sections: []domain.AudioSection{{ID: track.ID + "-section", Label: "full", StartSeconds: 0, EndSeconds: duration, Confidence: .8}},
+		Frames:   []domain.AnalysisFrame{{StartSeconds: 0, EndSeconds: 1, RMS: .24, Peak: .72, LoudnessLUFS: -11, LowEnergy: .42, MidEnergy: .5, HighEnergy: .3, SpectralFlux: .4, PercussiveStrength: .78, VocalProbability: .12, TonalStrength: .4, Chroma: metrics.Chroma}},
+		CueCandidates: []domain.CueCandidate{
+			{ID: "to-in", Kind: domain.CueKindIntro, StartSeconds: 0, EndSeconds: math.Min(64, duration), BeatIndex: 0, BarIndex: 0, Bars: 16, Confidence: .9, Metrics: metrics},
+			{ID: "from-out", Kind: domain.CueKindOutro, StartSeconds: math.Max(0, duration-64), EndSeconds: duration, BeatIndex: 0, BarIndex: 0, Bars: 16, Confidence: .9, Metrics: metrics},
+		},
+		AnalyzedAt: time.Date(2026, 8, 13, 0, 0, 0, 0, time.UTC),
 	}
 }
 

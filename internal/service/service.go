@@ -146,7 +146,15 @@ func (s *Service) Generate(ctx context.Context, request domain.GenerateRequest) 
 	if err != nil {
 		return nil, err
 	}
-	drafts, err := s.generator.Generate(tracks, request)
+	trackIDs := make([]string, len(tracks))
+	for index, track := range tracks {
+		trackIDs[index] = track.ID
+	}
+	analyses, err := s.store.LatestTrackAnalyses(ctx, trackIDs)
+	if err != nil {
+		return nil, err
+	}
+	drafts, err := s.generator.GenerateWithAnalyses(tracks, analyses, request)
 	if err != nil {
 		return nil, err
 	}

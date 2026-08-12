@@ -36,6 +36,30 @@ export type TrackEnrichment = {
 
 export type ScoreComponent = { name: string; score: number; note: string }
 
+export type AutomationPoint = { bar: number; value: number }
+export type AutomationLane = { target: string; points: AutomationPoint[] }
+
+export type TransitionPlan = {
+  version: string
+  fromCueId: string
+  toCueId: string
+  style: string
+  bars: number
+  fromStartSeconds: number
+  fromEndSeconds: number
+  toStartSeconds: number
+  toEndSeconds: number
+  tempoAdjustmentPct: number
+  bassSwapBar: number
+  score: number
+  risk: 'low' | 'medium' | 'high'
+  confidence: number
+  components: ScoreComponent[]
+  automation: AutomationLane[]
+  notes: string[]
+  renderValidationRequired: boolean
+}
+
 export type Transition = {
   fromTrackId: string
   toTrackId: string
@@ -47,6 +71,7 @@ export type Transition = {
   confidence: number
   summary: string
   components: ScoreComponent[]
+  plan?: TransitionPlan
 }
 
 export type SetTrack = {
@@ -74,6 +99,8 @@ export type SetDraft = {
   weakestTransition: number
   highRiskTransitions: number
   analysisConfidence: number
+  temporalCoverage: number
+  temporalConfidence: number
   createdAt: string
   tracks: SetTrack[]
 }

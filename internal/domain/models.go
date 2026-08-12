@@ -100,6 +100,7 @@ type Transition struct {
 	Confidence            float64          `json:"confidence"`
 	Summary               string           `json:"summary"`
 	Components            []ScoreComponent `json:"components"`
+	Plan                  *TransitionPlan  `json:"plan,omitempty"`
 }
 
 type SetTrack struct {
@@ -127,6 +128,8 @@ type SetDraft struct {
 	WeakestTransition   float64    `json:"weakestTransition"`
 	HighRiskTransitions int        `json:"highRiskTransitions"`
 	AnalysisConfidence  float64    `json:"analysisConfidence"`
+	TemporalCoverage    float64    `json:"temporalCoverage"`
+	TemporalConfidence  float64    `json:"temporalConfidence"`
 	CreatedAt           time.Time  `json:"createdAt"`
 	Tracks              []SetTrack `json:"tracks"`
 }
