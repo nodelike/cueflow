@@ -53,6 +53,12 @@ test('generates, compares, and inspects persisted set variations', async ({ page
     }
   })
   expect(readability).toEqual({ control: 13, sectionLabel: 10, trackTitle: 12, trackArtist: 10, inspectorTitle: 20, primaryAction: 13, trackRowHeight: 52 })
+  const windowChrome = await page.evaluate(() => ({
+    titlebarHeight: document.querySelector('.app-header')!.getBoundingClientRect().height,
+    workspaceRows: getComputedStyle(document.querySelector('.app-shell')!).gridTemplateRows,
+  }))
+  expect(windowChrome.titlebarHeight).toBe(44)
+  expect(windowChrome.workspaceRows.startsWith('44px ')).toBe(true)
   const timeline = page.getByLabel(/mix timeline/i)
   await expect(timeline).toBeVisible()
   const tracks = timeline.getByRole('button')
