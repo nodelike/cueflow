@@ -110,7 +110,7 @@ function App() {
         <main className="builder-layout">
           <GeneratorPanel value={request} tracks={data?.tracks ?? []} playlists={playlists} spotifyReady={spotifyReady} busy={busy} onChange={setRequest} onSyncSources={syncSources} onGenerate={() => void generate()} />
           <section className="set-canvas">
-            {!activeDraft ? <div className="empty-set"><Disc3 size={28} /><h2>No set yet</h2><p>Choose your constraints, add any must-play tracks, then generate a few directions.</p></div> : <>
+            {!activeDraft ? <div className="empty-set"><Disc3 size={28} /><h2>No set yet</h2><p>Choose your constraints, add any must-play tracks, then generate a few directions.</p></div> : <div className="set-workspace">
               <header className="set-header">
                 <div><span>{activeDraft.arc} · {formatDuration(activeDraft.durationSeconds)} · {activeDraft.tracks.length} tracks</span><h1>{activeDraft.name}</h1><p>Generated {formatDate(activeDraft.createdAt)}</p></div>
                 <div className="set-actions"><div className="quality"><strong>{activeDraft.qualityScore}</strong><span>quality</span></div><button type="button" disabled={!spotifyReady || busy} onClick={() => void publish()}><Send size={14} /> Publish</button></div>
@@ -118,22 +118,25 @@ function App() {
 
               {published && <div className="publish-success"><Check size={14} /> Published {published}</div>}
 
-              <div className="variation-bar" role="tablist" aria-label="Set variations">{drafts.map((draft, index) => <button type="button" role="tab" aria-selected={selectedDraft === index} className={selectedDraft === index ? 'active' : ''} key={draft.id} onClick={() => { setSelectedDraft(index); setSelectedPosition(1) }}><span>{String.fromCharCode(65 + index)}</span>{draft.qualityScore}</button>)}</div>
-
-              <div className="score-summary"><span>Energy <b>{Math.round(activeDraft.energyFit)}</b></span><span>Harmony <b>{Math.round(activeDraft.harmonicFlow)}</b></span><span>Tempo <b>{Math.round(activeDraft.tempoFlow)}</b></span><span>Variety <b>{Math.round(activeDraft.diversity)}</b></span></div>
+              <div className="set-toolbar">
+                <div className="variation-bar" role="tablist" aria-label="Set variations">{drafts.map((draft, index) => <button type="button" role="tab" aria-selected={selectedDraft === index} className={selectedDraft === index ? 'active' : ''} key={draft.id} onClick={() => { setSelectedDraft(index); setSelectedPosition(1) }}><span>{String.fromCharCode(65 + index)}</span>{draft.qualityScore}</button>)}</div>
+                <div className="score-summary"><span>Energy <b>{Math.round(activeDraft.energyFit)}</b></span><span>Harmony <b>{Math.round(activeDraft.harmonicFlow)}</b></span><span>Tempo <b>{Math.round(activeDraft.tempoFlow)}</b></span><span>Variety <b>{Math.round(activeDraft.diversity)}</b></span></div>
+              </div>
 
               <MixRibbon draft={activeDraft} selectedPosition={selectedPosition} onSelect={setSelectedPosition} />
 
               <div className="set-body">
                 <div className="track-ledger" aria-label="Set track list">
                   <div className="ledger-head"><span>#</span><span /><span>Track</span><span>BPM</span><span>Key</span><span>Energy</span></div>
-                  {activeDraft.tracks.map((item) => <button type="button" key={item.track.id} className={item.position === selectedPosition ? 'selected' : ''} onClick={() => setSelectedPosition(item.position)} aria-label={`${item.position}. ${item.track.title} by ${item.track.artist}`}>
-                    <span>{String(item.position).padStart(2, '0')}</span><TrackArtwork track={item.track} /><span><strong>{item.track.title}</strong><small>{item.track.artist}</small></span><b>{item.track.bpm}</b><CamelotKey value={item.track.camelot} compact /><i><span style={{ width: `${item.track.energy * 100}%` }} /></i>
-                  </button>)}
+                  <div className="ledger-scroll">
+                    {activeDraft.tracks.map((item) => <button type="button" key={item.track.id} className={item.position === selectedPosition ? 'selected' : ''} onClick={() => setSelectedPosition(item.position)} aria-label={`${item.position}. ${item.track.title} by ${item.track.artist}`}>
+                      <span>{String(item.position).padStart(2, '0')}</span><TrackArtwork track={item.track} /><span><strong>{item.track.title}</strong><small>{item.track.artist}</small></span><b>{item.track.bpm}</b><CamelotKey value={item.track.camelot} compact /><i><span style={{ width: `${item.track.energy * 100}%` }} /></i>
+                    </button>)}
+                  </div>
                 </div>
                 <SetInspector item={activeTrack} />
               </div>
-            </>}
+            </div>}
           </section>
         </main>}
     </div>
