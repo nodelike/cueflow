@@ -80,12 +80,6 @@ func (r GenerateRequest) WithDefaults() GenerateRequest {
 	if r.Arc == "" {
 		r.Arc = "journey"
 	}
-	if r.HarmonicStrictness == 0 {
-		r.HarmonicStrictness = 0.72
-	}
-	if r.Exploration == 0 {
-		r.Exploration = 0.28
-	}
 	return r
 }
 
@@ -96,12 +90,16 @@ type ScoreComponent struct {
 }
 
 type Transition struct {
-	FromTrackID string           `json:"fromTrackId"`
-	ToTrackID   string           `json:"toTrackId"`
-	Score       float64          `json:"score"`
-	Risk        string           `json:"risk"`
-	Summary     string           `json:"summary"`
-	Components  []ScoreComponent `json:"components"`
+	FromTrackID           string           `json:"fromTrackId"`
+	ToTrackID             string           `json:"toTrackId"`
+	Score                 float64          `json:"score"`
+	Risk                  string           `json:"risk"`
+	Basis                 string           `json:"basis"`
+	TempoAdjustmentPct    float64          `json:"tempoAdjustmentPct"`
+	TempoOctaveEquivalent bool             `json:"tempoOctaveEquivalent"`
+	Confidence            float64          `json:"confidence"`
+	Summary               string           `json:"summary"`
+	Components            []ScoreComponent `json:"components"`
 }
 
 type SetTrack struct {
@@ -112,19 +110,25 @@ type SetTrack struct {
 }
 
 type SetDraft struct {
-	ID              string     `json:"id"`
-	SessionID       string     `json:"sessionId"`
-	Name            string     `json:"name"`
-	Variation       int        `json:"variation"`
-	Arc             string     `json:"arc"`
-	DurationSeconds int        `json:"durationSeconds"`
-	QualityScore    float64    `json:"qualityScore"`
-	EnergyFit       float64    `json:"energyFit"`
-	HarmonicFlow    float64    `json:"harmonicFlow"`
-	TempoFlow       float64    `json:"tempoFlow"`
-	Diversity       float64    `json:"diversity"`
-	CreatedAt       time.Time  `json:"createdAt"`
-	Tracks          []SetTrack `json:"tracks"`
+	ID                  string     `json:"id"`
+	SessionID           string     `json:"sessionId"`
+	Name                string     `json:"name"`
+	Variation           int        `json:"variation"`
+	Arc                 string     `json:"arc"`
+	DurationSeconds     int        `json:"durationSeconds"`
+	DurationBasis       string     `json:"durationBasis"`
+	QualityScore        float64    `json:"qualityScore"`
+	ScoreVersion        string     `json:"scoreVersion"`
+	EnergyFit           float64    `json:"energyFit"`
+	HarmonicFlow        float64    `json:"harmonicFlow"`
+	TempoFlow           float64    `json:"tempoFlow"`
+	Diversity           float64    `json:"diversity"`
+	TransitionSafety    float64    `json:"transitionSafety"`
+	WeakestTransition   float64    `json:"weakestTransition"`
+	HighRiskTransitions int        `json:"highRiskTransitions"`
+	AnalysisConfidence  float64    `json:"analysisConfidence"`
+	CreatedAt           time.Time  `json:"createdAt"`
+	Tracks              []SetTrack `json:"tracks"`
 }
 
 type Bootstrap struct {

@@ -2,6 +2,7 @@ package generator
 
 import (
 	"math"
+	"strings"
 	"testing"
 
 	"cueflow/internal/domain"
@@ -128,8 +129,81 @@ func TestTransitionsExplainRisk(t *testing.T) {
 	if smooth.Score <= risky.Score {
 		t.Fatalf("expected adjacent transition %.3f to beat risky transition %.3f", smooth.Score, risky.Score)
 	}
-	if len(smooth.Components) != 5 || smooth.Summary == "" {
+	if len(smooth.Components) != 6 || smooth.Summary == "" {
 		t.Fatal("transition explanation is incomplete")
+	}
+	if smooth.Basis != transitionBasis || smooth.Confidence <= 0 {
+		t.Fatalf("transition did not disclose its basis and confidence: %#v", smooth)
+	}
+	if !strings.Contains(smooth.Summary, "beat-grid validation") {
+		t.Fatalf("metadata-only transition overclaims certainty: %q", smooth.Summary)
+	}
+}
+
+func TestTempoCompatibilityUsesRelativeAndOctaveEquivalentTempo(t *testing.T) {
+	score, adjustment, octaveEquivalent := tempoCompatibility(75, 150)
+	if score != 1 || adjustment != 0 || !octaveEquivalent {
+		t.Fatalf("expected 75→150 to align at double time, got score %.3f adjustment %.2f octave=%v", score, adjustment, octaveEquivalent)
+	}
+
+	score, adjustment, octaveEquivalent = tempoCompatibility(125, 150)
+	if adjustment < 19.9 || adjustment > 20.1 || octaveEquivalent || score >= .1 {
+		t.Fatalf("expected a risky 20%% direct tempo move, got score %.3f adjustment %.2f octave=%v", score, adjustment, octaveEquivalent)
+	}
+}
+
+func TestLowConfidenceTransitionCannotClaimLowRisk(t *testing.T) {
+	from := domain.Track{ID: "from", BPM: 124, Camelot: "8A", Groove: "house", Energy: .6, Vocal: .1, FeatureConfidence: .64}
+	to := domain.Track{ID: "to", BPM: 124, Camelot: "8A", Groove: "house", Energy: .62, Vocal: .1, FeatureConfidence: .64}
+
+	transition := scoreTransition(from, to, .8)
+	if transition.Risk != "medium" {
+		t.Fatalf("low-confidence metadata was labelled %q risk", transition.Risk)
+	}
+	if transition.Basis != "metadata-only" || transition.Confidence != .64 {
+		t.Fatalf("unexpected evidence contract: basis=%q confidence=%.3f", transition.Basis, transition.Confidence)
+	}
+	if !strings.Contains(transition.Summary, "feature confidence is limited") {
+		t.Fatalf("summary did not disclose limited confidence: %q", transition.Summary)
+	}
+}
+
+func TestDraftScoreCannotAverageAwayHighRiskTransition(t *testing.T) {
+	tracks := []domain.Track{
+		{ID: "one", DurationSeconds: 300, BPM: 124, Energy: .35, Role: "opener", Artist: "A", Groove: "house", SourcePlaylist: "crate", FeatureConfidence: .95},
+		{ID: "two", DurationSeconds: 300, BPM: 125, Energy: .58, Role: "builder", Artist: "B", Groove: "house", SourcePlaylist: "crate", FeatureConfidence: .95},
+		{ID: "three", DurationSeconds: 300, BPM: 126, Energy: .78, Role: "closer", Artist: "C", Groove: "house", SourcePlaylist: "crate", FeatureConfidence: .95},
+	}
+	state := beamState{
+		tracks:   tracks,
+		duration: 900,
+		transitions: []domain.Transition{
+			{Score: .96, Risk: "low", Components: []domain.ScoreComponent{{Name: "tempo", Score: .96}, {Name: "harmony", Score: .96}}},
+			{Score: .22, Risk: "high", Components: []domain.ScoreComponent{{Name: "tempo", Score: .2}, {Name: "harmony", Score: .3}}},
+		},
+	}
+
+	draft := buildDraft(state, domain.GenerateRequest{Name: "Weak link", DurationMinutes: 15, Arc: "journey"}, 1, "session")
+	if draft.HighRiskTransitions != 1 || draft.QualityScore > 74 {
+		t.Fatalf("high-risk edge was hidden: highRisk=%d fit=%.1f", draft.HighRiskTransitions, draft.QualityScore)
+	}
+	if draft.WeakestTransition != 22 || draft.TransitionSafety != 22 {
+		t.Fatalf("weak-link metrics are wrong: weakest=%.1f safety=%.1f", draft.WeakestTransition, draft.TransitionSafety)
+	}
+	if draft.ScoreVersion != scoreVersion || draft.DurationBasis != "full-track-sum" {
+		t.Fatalf("draft lacks scoring provenance: version=%q durationBasis=%q", draft.ScoreVersion, draft.DurationBasis)
+	}
+}
+
+func TestGenerateRejectsGrossDurationMiss(t *testing.T) {
+	tracks := []domain.Track{
+		{ID: "one", DurationSeconds: 600, BPM: 124, Camelot: "8A", Groove: "house"},
+		{ID: "two", DurationSeconds: 600, BPM: 125, Camelot: "9A", Groove: "house"},
+		{ID: "three", DurationSeconds: 600, BPM: 126, Camelot: "10A", Groove: "house"},
+	}
+	_, err := New().Generate(tracks, domain.GenerateRequest{Name: "Too short", DurationMinutes: 15, VariationCount: 1})
+	if err == nil || !strings.Contains(err.Error(), "within 10%") {
+		t.Fatalf("expected an honest duration failure, got %v", err)
 	}
 }
 

@@ -41,6 +41,10 @@ export type Transition = {
   toTrackId: string
   score: number
   risk: 'low' | 'medium' | 'high' | ''
+  basis: 'metadata-only' | 'temporal' | 'rendered' | ''
+  tempoAdjustmentPct: number
+  tempoOctaveEquivalent: boolean
+  confidence: number
   summary: string
   components: ScoreComponent[]
 }
@@ -59,11 +63,17 @@ export type SetDraft = {
   variation: number
   arc: string
   durationSeconds: number
+  durationBasis: string
   qualityScore: number
+  scoreVersion: string
   energyFit: number
   harmonicFlow: number
   tempoFlow: number
   diversity: number
+  transitionSafety: number
+  weakestTransition: number
+  highRiskTransitions: number
+  analysisConfidence: number
   createdAt: string
   tracks: SetTrack[]
 }

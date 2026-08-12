@@ -21,6 +21,10 @@ export namespace domain {
 	    toTrackId: string;
 	    score: number;
 	    risk: string;
+	    basis: string;
+	    tempoAdjustmentPct: number;
+	    tempoOctaveEquivalent: boolean;
+	    confidence: number;
 	    summary: string;
 	    components: ScoreComponent[];
 	
@@ -34,6 +38,10 @@ export namespace domain {
 	        this.toTrackId = source["toTrackId"];
 	        this.score = source["score"];
 	        this.risk = source["risk"];
+	        this.basis = source["basis"];
+	        this.tempoAdjustmentPct = source["tempoAdjustmentPct"];
+	        this.tempoOctaveEquivalent = source["tempoOctaveEquivalent"];
+	        this.confidence = source["confidence"];
 	        this.summary = source["summary"];
 	        this.components = this.convertValues(source["components"], ScoreComponent);
 	    }
@@ -99,11 +107,17 @@ export namespace domain {
 	    variation: number;
 	    arc: string;
 	    durationSeconds: number;
+	    durationBasis: string;
 	    qualityScore: number;
+	    scoreVersion: string;
 	    energyFit: number;
 	    harmonicFlow: number;
 	    tempoFlow: number;
 	    diversity: number;
+	    transitionSafety: number;
+	    weakestTransition: number;
+	    highRiskTransitions: number;
+	    analysisConfidence: number;
 	    // Go type: time
 	    createdAt: any;
 	    tracks: SetTrack[];
@@ -120,11 +134,17 @@ export namespace domain {
 	        this.variation = source["variation"];
 	        this.arc = source["arc"];
 	        this.durationSeconds = source["durationSeconds"];
+	        this.durationBasis = source["durationBasis"];
 	        this.qualityScore = source["qualityScore"];
+	        this.scoreVersion = source["scoreVersion"];
 	        this.energyFit = source["energyFit"];
 	        this.harmonicFlow = source["harmonicFlow"];
 	        this.tempoFlow = source["tempoFlow"];
 	        this.diversity = source["diversity"];
+	        this.transitionSafety = source["transitionSafety"];
+	        this.weakestTransition = source["weakestTransition"];
+	        this.highRiskTransitions = source["highRiskTransitions"];
+	        this.analysisConfidence = source["analysisConfidence"];
 	        this.createdAt = this.convertValues(source["createdAt"], null);
 	        this.tracks = this.convertValues(source["tracks"], SetTrack);
 	    }
@@ -357,4 +377,3 @@ export namespace spotify {
 	}
 
 }
-

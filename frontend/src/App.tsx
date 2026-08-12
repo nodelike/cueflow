@@ -113,14 +113,14 @@ function App() {
             {!activeDraft ? <div className="empty-set"><Disc3 size={28} /><h2>No set yet</h2><p>Choose your constraints, add any must-play tracks, then generate a few directions.</p></div> : <div className="set-workspace">
               <header className="set-header">
                 <div><span>{activeDraft.arc} · {formatDuration(activeDraft.durationSeconds)} · {activeDraft.tracks.length} tracks</span><h1>{activeDraft.name}</h1><p>Generated {formatDate(activeDraft.createdAt)}</p></div>
-                <div className="set-actions"><div className="quality"><strong>{activeDraft.qualityScore}</strong><span>quality</span></div><button type="button" disabled={!spotifyReady || busy} onClick={() => void publish()}><Send size={14} /> Publish</button></div>
+                <div className="set-actions"><div className="quality" title="Metadata-based heuristic fit; this is not a rendered-audio quality score"><strong>{activeDraft.qualityScore}</strong><span>heuristic fit</span></div><button type="button" disabled={!spotifyReady || busy} onClick={() => void publish()}><Send size={14} /> Publish</button></div>
               </header>
 
               {published && <div className="publish-success"><Check size={14} /> Published {published}</div>}
 
               <div className="set-toolbar">
                 <div className="variation-bar" role="tablist" aria-label="Set variations">{drafts.map((draft, index) => <button type="button" role="tab" aria-selected={selectedDraft === index} className={selectedDraft === index ? 'active' : ''} key={draft.id} onClick={() => { setSelectedDraft(index); setSelectedPosition(1) }}><span>{String.fromCharCode(65 + index)}</span>{draft.qualityScore}</button>)}</div>
-                <div className="score-summary"><span>Energy <b>{Math.round(activeDraft.energyFit)}</b></span><span>Harmony <b>{Math.round(activeDraft.harmonicFlow)}</b></span><span>Tempo <b>{Math.round(activeDraft.tempoFlow)}</b></span><span>Variety <b>{Math.round(activeDraft.diversity)}</b></span></div>
+                <div className="score-summary"><span>Energy <b>{Math.round(activeDraft.energyFit)}</b></span><span>Harmony <b>{Math.round(activeDraft.harmonicFlow)}</b></span><span>Tempo <b>{Math.round(activeDraft.tempoFlow)}</b></span><span>Safety <b>{Math.round(activeDraft.transitionSafety)}</b></span></div>
               </div>
 
               <MixRibbon draft={activeDraft} selectedPosition={selectedPosition} onSelect={setSelectedPosition} />

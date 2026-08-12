@@ -35,8 +35,10 @@ describe('Cueflow set desk', () => {
   it('renders the persisted set and exposes transition reasoning', async () => {
     render(<App />)
     expect(await screen.findByText('Afro to pressure — A')).toBeInTheDocument()
+    expect(screen.getByText('heuristic fit')).toBeInTheDocument()
     await userEvent.click(within(screen.getByLabelText('Set track list')).getByRole('button', { name: /2\. Clay Drums/ }))
-    expect(screen.getByText(/tempo locks cleanly/i)).toBeInTheDocument()
+    expect(screen.getByText(/beat-grid validation is still pending/i)).toBeInTheDocument()
+    expect(screen.getByText(/Transition in · metadata fit/i)).toBeInTheDocument()
     expect(screen.getByText('adjacent Camelot movement')).toBeInTheDocument()
   })
 

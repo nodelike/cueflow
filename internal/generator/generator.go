@@ -16,8 +16,12 @@ import (
 )
 
 const (
-	beamWidth   = 42
-	branchWidth = 14
+	beamWidth          = 42
+	branchWidth        = 14
+	durationLowerBound = .90
+	durationUpperBound = 1.10
+	scoreVersion       = "heuristic-fit-v2"
+	transitionBasis    = "metadata-only"
 )
 
 type Generator struct{}
@@ -110,14 +114,14 @@ func (g *Generator) generateOne(pool []domain.Track, req domain.GenerateRequest,
 	maxPositions := min(len(pool), targetCount+5)
 	for position := 1; position < maxPositions; position++ {
 		next := make([]beamState, 0, beamWidth*branchWidth)
-		progress := float64(position) / float64(max(1, targetCount-1))
 		for _, state := range states {
-			if len(state.tracks) >= 3 && state.duration >= int(float64(targetSeconds)*.94) {
+			if len(state.tracks) >= 3 && durationWithinBounds(state.duration, targetSeconds) {
 				completed = append(completed, state)
 			}
-			if state.duration >= int(float64(targetSeconds)*1.03) && includesAll(state.used, required) {
+			if state.duration >= int(float64(targetSeconds)*durationUpperBound) {
 				continue
 			}
+			progress := clamp01(float64(state.duration) / float64(targetSeconds))
 			candidates := g.rankCandidates(state, pool, req, required, usedEdges, usedTracks, progress, rng)
 			for _, item := range candidates[:min(branchWidth, len(candidates))] {
 				used := cloneSet(state.used)
@@ -143,12 +147,12 @@ func (g *Generator) generateOne(pool []domain.Track, req domain.GenerateRequest,
 
 	valid := completed[:0]
 	for _, state := range completed {
-		if includesAll(state.used, required) {
+		if includesAll(state.used, required) && durationWithinBounds(state.duration, targetSeconds) {
 			valid = append(valid, state)
 		}
 	}
 	if len(valid) == 0 {
-		return domain.SetDraft{}, fmt.Errorf("could not place all required tracks within the requested duration")
+		return domain.SetDraft{}, fmt.Errorf("could not place all required tracks within 10%% of the requested duration")
 	}
 	sort.Slice(valid, func(i, j int) bool {
 		return finalStateScore(valid[i], targetSeconds, req) > finalStateScore(valid[j], targetSeconds, req)
@@ -167,6 +171,7 @@ func openerStates(pool []domain.Track, req domain.GenerateRequest, usedTracks ma
 		if req.StartBPM > 0 {
 			score += .68 * tempoTargetScore(track.BPM, req.StartBPM)
 		}
+		score -= (1 - trackConfidence(track)) * .1
 		score -= float64(usedTracks[track.ID]) * (.1 + req.Exploration*.05)
 		score += (rng.Float64() - .5) * req.Exploration * .12
 		candidates = append(candidates, candidate{track: track, score: score})
@@ -201,6 +206,13 @@ func (g *Generator) rankCandidates(state beamState, pool []domain.Track, req dom
 		}
 		roleFit := roleScore(track.Role, progress)
 		score := transition.Score*.45 + energyFit*.22 + bpmFit*.24 + roleFit*.09
+		score -= (1 - trackConfidence(track)) * .1
+		switch transition.Risk {
+		case "high":
+			score -= .22
+		case "medium":
+			score -= .06
+		}
 		if required[track.ID] {
 			score += .55
 		}
@@ -217,42 +229,45 @@ func (g *Generator) rankCandidates(state beamState, pool []domain.Track, req dom
 }
 
 func scoreTransition(from, to domain.Track, strictness float64) domain.Transition {
-	tempo := clamp01(math.Exp(-math.Abs(from.BPM-to.BPM) / 5.8))
+	tempo, tempoAdjustment, octaveEquivalent := tempoCompatibility(from.BPM, to.BPM)
 	harmonic, harmonicNote := harmonicScore(from.Camelot, to.Camelot)
 	groove := grooveScore(from.Groove, to.Groove)
-	vocal := 1.0
-	vocalNote := "vocal space is clear"
-	if from.Vocal > .62 && to.Vocal > .62 {
-		vocal = .18
-		vocalNote = "both tracks carry dominant vocals"
-	} else if from.Vocal > .72 && to.Vocal > .4 {
-		vocal = .56
-		vocalNote = "outgoing vocal needs a clean phrase exit"
+	vocal := clamp01(1 - from.Vocal*to.Vocal*1.1)
+	vocalNote := "global vocal-density estimates leave room"
+	if vocal < .45 {
+		vocalNote = "global vocal-density estimates indicate collision risk"
+	} else if vocal < .72 {
+		vocalNote = "verify that lead-vocal phrases do not overlap"
 	}
 	energyStep := clamp01(1 - math.Max(0, math.Abs(to.Energy-from.Energy)-.18)*2.8)
+	confidence := math.Min(trackConfidence(from), trackConfidence(to))
 	harmonicWeight := .14 + strictness*.24
 	otherWeight := 1 - harmonicWeight
 	score := harmonic*harmonicWeight + tempo*(otherWeight*.34) + groove*(otherWeight*.31) + vocal*(otherWeight*.19) + energyStep*(otherWeight*.16)
-	score = clamp01(score)
-	risk := "low"
-	if score < .48 {
-		risk = "high"
-	} else if score < .68 {
-		risk = "medium"
+	score = clamp01(score * (.72 + confidence*.28))
+	risk := transitionRisk(score, tempoAdjustment, confidence, vocal)
+	summary := transitionSummary(tempoAdjustment, octaveEquivalent, harmonic, groove, vocal, confidence)
+	tempoNote := fmt.Sprintf("%.1f%% estimated tempo adjustment from global BPM", tempoAdjustment)
+	if octaveEquivalent {
+		tempoNote += " using a half/double-time interpretation"
 	}
-	summary := transitionSummary(from, to, tempo, harmonic, groove, vocal)
 	return domain.Transition{
-		FromTrackID: from.ID,
-		ToTrackID:   to.ID,
-		Score:       round(score, 3),
-		Risk:        risk,
-		Summary:     summary,
+		FromTrackID:           from.ID,
+		ToTrackID:             to.ID,
+		Score:                 round(score, 3),
+		Risk:                  risk,
+		Basis:                 transitionBasis,
+		TempoAdjustmentPct:    round(tempoAdjustment, 2),
+		TempoOctaveEquivalent: octaveEquivalent,
+		Confidence:            round(confidence, 3),
+		Summary:               summary,
 		Components: []domain.ScoreComponent{
-			{Name: "tempo", Score: round(tempo, 3), Note: fmt.Sprintf("%+.1f BPM movement", to.BPM-from.BPM)},
+			{Name: "tempo", Score: round(tempo, 3), Note: tempoNote},
 			{Name: "harmony", Score: round(harmonic, 3), Note: harmonicNote},
 			{Name: "groove", Score: round(groove, 3), Note: from.Groove + " → " + to.Groove},
 			{Name: "vocals", Score: round(vocal, 3), Note: vocalNote},
 			{Name: "energy", Score: round(energyStep, 3), Note: fmt.Sprintf("%+.0f%% energy movement", (to.Energy-from.Energy)*100)},
+			{Name: "confidence", Score: round(confidence, 3), Note: "minimum confidence of the two global feature records"},
 		},
 	}
 }
@@ -347,8 +362,10 @@ func roleScore(role string, progress float64) float64 {
 func buildDraft(state beamState, req domain.GenerateRequest, variation int, sessionID string) domain.SetDraft {
 	tracks := make([]domain.SetTrack, len(state.tracks))
 	energyFit := 0.0
+	elapsed := 0
+	targetSeconds := req.DurationMinutes * 60
 	for i, track := range state.tracks {
-		progress := float64(i) / float64(max(1, len(state.tracks)-1))
+		progress := clamp01(float64(elapsed+track.DurationSeconds/2) / float64(targetSeconds))
 		target := targetEnergy(req.Arc, progress)
 		energyFit += clamp01(1 - math.Abs(track.Energy-target)*1.45)
 		item := domain.SetTrack{Position: i + 1, Track: track, TargetEnergy: round(target, 3)}
@@ -356,27 +373,39 @@ func buildDraft(state beamState, req domain.GenerateRequest, variation int, sess
 			item.Transition = state.transitions[i-1]
 		}
 		tracks[i] = item
+		elapsed += track.DurationSeconds
 	}
 	energyFit /= float64(len(tracks))
 	transitionTempo, harmony := transitionAverages(state.transitions)
 	tempo := transitionTempo*.7 + tempoCurveFit(state.tracks, req)*.3
 	diversity := diversityScore(state.tracks)
-	durationFit := clamp01(1 - math.Abs(float64(state.duration-req.DurationMinutes*60))/float64(req.DurationMinutes*60)*1.8)
-	quality := 100 * (energyFit*.27 + tempo*.2 + harmony*.2 + diversity*.12 + durationFit*.16 + endingScore(state.tracks)*.05)
+	durationFit := clamp01(1 - math.Abs(float64(state.duration-targetSeconds))/float64(targetSeconds)*2)
+	transitionSafety, weakestTransition, highRiskTransitions := transitionSafetyStats(state.transitions)
+	analysisConfidence := averageTrackConfidence(state.tracks)
+	quality := 100 * (energyFit*.20 + tempo*.15 + harmony*.12 + diversity*.08 + durationFit*.15 + endingScore(state.tracks)*.08 + transitionSafety*.17 + analysisConfidence*.05)
+	if highRiskTransitions > 0 {
+		quality = math.Min(quality, math.Max(58, 74-float64(highRiskTransitions-1)*4))
+	}
 	return domain.SetDraft{
-		ID:              uuid.NewString(),
-		SessionID:       sessionID,
-		Name:            fmt.Sprintf("%s — %c", req.Name, 'A'+rune(variation-1)),
-		Variation:       variation,
-		Arc:             req.Arc,
-		DurationSeconds: state.duration,
-		QualityScore:    round(quality, 1),
-		EnergyFit:       round(energyFit*100, 1),
-		HarmonicFlow:    round(harmony*100, 1),
-		TempoFlow:       round(tempo*100, 1),
-		Diversity:       round(diversity*100, 1),
-		CreatedAt:       time.Now().UTC(),
-		Tracks:          tracks,
+		ID:                  uuid.NewString(),
+		SessionID:           sessionID,
+		Name:                fmt.Sprintf("%s — %c", req.Name, 'A'+rune(variation-1)),
+		Variation:           variation,
+		Arc:                 req.Arc,
+		DurationSeconds:     state.duration,
+		DurationBasis:       "full-track-sum",
+		QualityScore:        round(quality, 1),
+		ScoreVersion:        scoreVersion,
+		EnergyFit:           round(energyFit*100, 1),
+		HarmonicFlow:        round(harmony*100, 1),
+		TempoFlow:           round(tempo*100, 1),
+		Diversity:           round(diversity*100, 1),
+		TransitionSafety:    round(transitionSafety*100, 1),
+		WeakestTransition:   round(weakestTransition*100, 1),
+		HighRiskTransitions: highRiskTransitions,
+		AnalysisConfidence:  round(analysisConfidence*100, 1),
+		CreatedAt:           time.Now().UTC(),
+		Tracks:              tracks,
 	}
 }
 
@@ -420,26 +449,30 @@ func endingScore(tracks []domain.Track) float64 {
 	return .55
 }
 
-func transitionSummary(from, to domain.Track, tempo, harmonic, groove, vocal float64) string {
+func transitionSummary(tempoAdjustment float64, octaveEquivalent bool, harmonic, groove, vocal, confidence float64) string {
 	parts := []string{}
-	if tempo > .82 {
-		parts = append(parts, "tempo locks cleanly")
-	} else if tempo < .55 {
-		parts = append(parts, "make the tempo change during a breakdown")
+	if octaveEquivalent && tempoAdjustment <= 5 {
+		parts = append(parts, "global BPMs align under a half/double-time interpretation; verify the beat grid")
+	} else if tempoAdjustment <= 5 {
+		parts = append(parts, fmt.Sprintf("global BPMs need about %.1f%% adjustment; beat-grid validation is still pending", tempoAdjustment))
+	} else if tempoAdjustment > 10 {
+		parts = append(parts, fmt.Sprintf("large %.1f%% tempo move; plan a cut, verified breakdown, or tempo bridge", tempoAdjustment))
+	} else {
+		parts = append(parts, fmt.Sprintf("moderate %.1f%% tempo move; verify stretch quality before blending", tempoAdjustment))
 	}
 	if harmonic > .88 {
-		parts = append(parts, "harmonic movement is smooth")
+		parts = append(parts, "global Camelot keys are compatible")
 	} else if harmonic < .45 {
-		parts = append(parts, "lead with drums or an echo exit")
+		parts = append(parts, "global keys are distant; prefer a drum-led region or effect exit")
 	}
 	if groove > .84 {
-		parts = append(parts, "the drum language carries the blend")
+		parts = append(parts, "groove labels are compatible")
 	}
-	if vocal < .4 {
-		parts = append(parts, "avoid overlapping the vocal phrases")
+	if vocal < .45 {
+		parts = append(parts, "global vocal estimates make an unverified overlap risky")
 	}
-	if len(parts) == 0 {
-		parts = append(parts, "balanced transition with a standard phrase blend")
+	if confidence < .75 {
+		parts = append(parts, "feature confidence is limited")
 	}
 	return strings.Join(parts, "; ")
 }
@@ -459,12 +492,16 @@ func interpolatedBPM(req domain.GenerateRequest, progress float64) float64 {
 }
 
 func tempoTargetScore(actual, target float64) float64 {
-	return clamp01(math.Exp(-math.Abs(actual-target) / 5.5))
+	score, _, _ := tempoCompatibility(target, actual)
+	return score
 }
 
 func finalStateScore(state beamState, targetSeconds int, req domain.GenerateRequest) float64 {
 	base := normalizedStateScore(state, targetSeconds, len(state.tracks))
 	base += .24 * tempoCurveFit(state.tracks, req)
+	transitionSafety, _, highRisk := transitionSafetyStats(state.transitions)
+	base += .18 * transitionSafety
+	base -= float64(highRisk) * .24
 	end := state.tracks[len(state.tracks)-1]
 	if end.Role == "closer" {
 		base += .12
@@ -479,12 +516,17 @@ func tempoCurveFit(tracks []domain.Track, req domain.GenerateRequest) float64 {
 	if len(tracks) == 0 || (req.StartBPM <= 0 && req.EndBPM <= 0) {
 		return 1
 	}
-	total := 0.0
-	for index, track := range tracks {
-		progress := float64(index) / float64(max(1, len(tracks)-1))
-		total += tempoTargetScore(track.BPM, interpolatedBPM(req, progress))
+	totalDuration := 0
+	for _, track := range tracks {
+		totalDuration += track.DurationSeconds
 	}
-	return total / float64(len(tracks))
+	total, elapsed := 0.0, 0
+	for _, track := range tracks {
+		progress := float64(elapsed+track.DurationSeconds/2) / float64(max(1, totalDuration))
+		total += tempoTargetScore(track.BPM, interpolatedBPM(req, progress)) * float64(track.DurationSeconds)
+		elapsed += track.DurationSeconds
+	}
+	return total / float64(max(1, totalDuration))
 }
 
 func normalizedStateScore(state beamState, targetSeconds, count int) float64 {
@@ -494,8 +536,112 @@ func normalizedStateScore(state beamState, targetSeconds, count int) float64 {
 
 func stableSeed(req domain.GenerateRequest) int64 {
 	h := fnv.New64a()
-	_, _ = h.Write([]byte(fmt.Sprintf("%s|%d|%s|%.3f|%.3f|%.1f|%.1f", req.Name, req.DurationMinutes, req.Arc, req.HarmonicStrictness, req.Exploration, req.StartBPM, req.EndBPM)))
+	_, _ = h.Write([]byte(fmt.Sprintf("%s|%d|%d|%s|%.3f|%.3f|%.1f|%.1f|%s|%s|%s|%s", req.Name, req.DurationMinutes, req.VariationCount, req.Arc, req.HarmonicStrictness, req.Exploration, req.StartBPM, req.EndBPM, stableList(req.AllowedGrooves), stableList(req.SourcePlaylistIDs), stableList(req.RequiredTrackIDs), stableList(req.ExcludedTrackIDs))))
 	return int64(h.Sum64())
+}
+
+func durationWithinBounds(duration, target int) bool {
+	if target <= 0 {
+		return false
+	}
+	ratio := float64(duration) / float64(target)
+	return ratio >= durationLowerBound && ratio <= durationUpperBound
+}
+
+// trackConfidence treats a missing confidence value as unknown rather than as
+// proven-bad analysis. This preserves compatibility with manually curated and
+// older catalog records while preventing low-confidence enrichment from being
+// presented as certain.
+func trackConfidence(track domain.Track) float64 {
+	if track.FeatureConfidence <= 0 {
+		return .5
+	}
+	return clamp01(track.FeatureConfidence)
+}
+
+func averageTrackConfidence(tracks []domain.Track) float64 {
+	if len(tracks) == 0 {
+		return .5
+	}
+	total := 0.0
+	for _, track := range tracks {
+		total += trackConfidence(track)
+	}
+	return total / float64(len(tracks))
+}
+
+// tempoCompatibility compares proportional tempo changes rather than raw BPM
+// points. Half- and double-time interpretations are considered, but surfaced
+// explicitly so a downstream planner still has to validate the beat grid.
+func tempoCompatibility(reference, candidate float64) (score, adjustmentPct float64, octaveEquivalent bool) {
+	if reference <= 0 || candidate <= 0 {
+		return .25, 100, false
+	}
+	type interpretation struct {
+		factor float64
+		pct    float64
+	}
+	options := []interpretation{
+		{factor: 1, pct: math.Abs(candidate-reference) / reference * 100},
+		{factor: .5, pct: math.Abs(candidate*.5-reference) / reference * 100},
+		{factor: 2, pct: math.Abs(candidate*2-reference) / reference * 100},
+	}
+	best := options[0]
+	for _, option := range options[1:] {
+		if option.pct < best.pct {
+			best = option
+		}
+	}
+	return clamp01(math.Exp(-best.pct / 6.5)), best.pct, best.factor != 1
+}
+
+func transitionRisk(score, adjustmentPct, confidence, vocal float64) string {
+	risk := "low"
+	if score < .48 {
+		risk = "high"
+	} else if score < .68 {
+		risk = "medium"
+	}
+	if adjustmentPct > 10 || confidence < .55 {
+		return "high"
+	}
+	if adjustmentPct > 5 || confidence < .75 || vocal < .45 {
+		return maxRisk(risk, "medium")
+	}
+	return risk
+}
+
+func maxRisk(left, right string) string {
+	severity := map[string]int{"low": 0, "medium": 1, "high": 2}
+	if severity[right] > severity[left] {
+		return right
+	}
+	return left
+}
+
+// transitionSafety deliberately emphasizes the weakest edge. A plain average
+// can make one train-wreck transition disappear inside an otherwise safe set.
+func transitionSafetyStats(items []domain.Transition) (safety, weakest float64, highRisk int) {
+	if len(items) == 0 {
+		return 1, 1, 0
+	}
+	scores := make([]float64, len(items))
+	for i, item := range items {
+		scores[i] = clamp01(item.Score)
+		if item.Risk == "high" {
+			highRisk++
+		}
+	}
+	sort.Float64s(scores)
+	weakest = scores[0]
+	p10 := scores[int(math.Floor(.1*float64(len(scores)-1)))]
+	return clamp01(.6*p10 + .4*weakest), weakest, highRisk
+}
+
+func stableList(values []string) string {
+	copyOfValues := append([]string(nil), values...)
+	sort.Strings(copyOfValues)
+	return strings.Join(copyOfValues, ",")
 }
 
 func parseCamelot(value string) (int, byte, bool) {
