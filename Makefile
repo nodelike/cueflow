@@ -1,9 +1,10 @@
 GO ?= go
 PNPM ?= pnpm
 WAILS ?= wails
+PYTHON ?= python3
 DATABASE_URL ?= postgres://$(USER)@127.0.0.1:5432/cueflow?sslmode=disable
 
-.PHONY: dev-api dev-ui migrate seed spotify-auth spotify-sync enrich-import test test-go test-ui test-e2e build fmt
+.PHONY: dev-api dev-ui migrate seed spotify-auth spotify-sync enrich-import analysis-validate analysis-import test test-go test-ui test-analysis test-e2e build fmt
 
 dev-api:
 	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/server
@@ -28,13 +29,24 @@ enrich-import:
 	@test -n "$(FILE)" || (echo "usage: make enrich-import FILE=/path/to/enrichment.csv" >&2; exit 2)
 	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/cueflow enrich-import '$(FILE)'
 
-test: test-go test-ui
+analysis-import:
+	@test -n "$(FILE)" || (echo "usage: make analysis-import FILE=/path/to/track-analysis.json" >&2; exit 2)
+	DATABASE_URL='$(DATABASE_URL)' $(GO) run ./cmd/cueflow analysis-import '$(FILE)'
+
+analysis-validate:
+	@test -n "$(FILE)" || (echo "usage: make analysis-validate FILE=/path/to/track-analysis.json" >&2; exit 2)
+	$(GO) run ./cmd/cueflow analysis-validate '$(FILE)'
+
+test: test-go test-ui test-analysis
 
 test-go:
 	DATABASE_URL='$(DATABASE_URL)' $(GO) test ./...
 
 test-ui:
 	$(PNPM) --dir frontend test --run
+
+test-analysis:
+	$(PYTHON) -m py_compile scripts/analyze_previews.py scripts/analyze_tracks.py scripts/crosscheck_mixgraph.py scripts/prepare_enrichment.py
 
 test-e2e:
 	DATABASE_URL='$(DATABASE_URL)' $(PNPM) --dir frontend test:e2e

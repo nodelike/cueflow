@@ -56,6 +56,35 @@ func TestPostgresRoundTripAndLatestSession(t *testing.T) {
 	if err != nil || len(listed) != 4 {
 		t.Fatalf("track round trip: %d %v", len(listed), err)
 	}
+	analysis := storeAnalysisFixture(tracks[0])
+	if err := repository.UpsertTrackAnalyses(ctx, []domain.TrackAnalysis{analysis}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.UpsertTrackAnalyses(ctx, []domain.TrackAnalysis{analysis}); err != nil {
+		t.Fatalf("idempotent analysis import failed: %v", err)
+	}
+	rerun := analysis
+	rerun.AnalyzedAt = rerun.AnalyzedAt.Add(time.Hour)
+	if err := repository.UpsertTrackAnalyses(ctx, []domain.TrackAnalysis{rerun}); err != nil {
+		t.Fatalf("rerun with a different timestamp was not idempotent: %v", err)
+	}
+	latestAnalyses, err := repository.LatestTrackAnalyses(ctx, []string{tracks[0].ID})
+	if err != nil || len(latestAnalyses) != 1 || latestAnalyses[tracks[0].ID].AudioFingerprint != analysis.AudioFingerprint {
+		t.Fatalf("analysis round trip: %#v err=%v", latestAnalyses, err)
+	}
+	changedIdentity := analysis
+	changedIdentity.TempoBPM++
+	if err := repository.UpsertTrackAnalyses(ctx, []domain.TrackAnalysis{changedIdentity}); err == nil || !strings.Contains(err.Error(), "different payload") {
+		t.Fatalf("non-reproducible analysis identity was accepted: %v", err)
+	}
+	previewOnly := storeAnalysisFixture(tracks[1])
+	previewOnly.DurationSeconds = 30
+	previewOnly.Waveform[0].EndSeconds = 30
+	previewOnly.Sections[0].EndSeconds = 30
+	previewOnly.CueCandidates[0].EndSeconds = 16
+	if err := repository.UpsertTrackAnalyses(ctx, []domain.TrackAnalysis{previewOnly}); err == nil || !strings.Contains(err.Error(), "full-recording audio is required") {
+		t.Fatalf("preview-only temporal analysis was accepted: %v", err)
+	}
 	now := time.Now().UTC()
 	const playlistID = "crate-afro"
 	if _, err := repository.pool.Exec(ctx, `INSERT INTO spotify_playlists(id,name,kind,writable,image_url,track_count,synced_at) VALUES($1,'Afro crate','source',FALSE,'https://image.test/crate',1,NOW())`, playlistID); err != nil {
@@ -142,5 +171,21 @@ func TestPostgresRoundTripAndLatestSession(t *testing.T) {
 	}
 	if bpm != 128 {
 		t.Fatalf("failed batch was not atomic: BPM=%v", bpm)
+	}
+}
+
+func storeAnalysisFixture(track domain.Track) domain.TrackAnalysis {
+	duration := float64(track.DurationSeconds)
+	metrics := domain.CueWindowMetrics{LoudnessLUFS: -12, Peak: .6, LowEnergy: .4, MidEnergy: .5, HighEnergy: .3, PercussiveStrength: .7, VocalProbability: .1, TonalStrength: .5}
+	return domain.TrackAnalysis{
+		SchemaVersion: domain.TemporalAnalysisSchemaVersion, TrackID: track.ID,
+		AudioFingerprint: "sha256:test-" + track.ID, AnalyzerVersion: "test/1",
+		DurationSeconds: duration, SampleRate: 44100, Channels: 2, TempoBPM: track.BPM, TempoConfidence: .9,
+		Waveform:      []domain.WaveformPoint{{StartSeconds: 0, EndSeconds: duration, RMS: .2, Peak: .6}},
+		Beats:         []domain.BeatMarker{{TimeSeconds: 0, BeatInBar: 1, BarIndex: 0, Confidence: .9}, {TimeSeconds: .5, BeatInBar: 2, BarIndex: 0, Confidence: .9}},
+		Sections:      []domain.AudioSection{{ID: "full", Label: "full", StartSeconds: 0, EndSeconds: duration, Confidence: .8}},
+		Frames:        []domain.AnalysisFrame{{StartSeconds: 0, EndSeconds: 1, RMS: .2, Peak: .6, LoudnessLUFS: -12, LowEnergy: .4, MidEnergy: .5, HighEnergy: .3, SpectralFlux: .2, PercussiveStrength: .7, VocalProbability: .1, TonalStrength: .5}},
+		CueCandidates: []domain.CueCandidate{{ID: "intro", Kind: domain.CueKindIntro, StartSeconds: 0, EndSeconds: 16, BeatIndex: 0, BarIndex: 0, Bars: 8, Confidence: .9, Metrics: metrics}},
+		AnalyzedAt:    time.Date(2026, 8, 13, 0, 0, 0, 0, time.UTC),
 	}
 }

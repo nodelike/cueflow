@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
+	"cueflow/internal/analysisjson"
 	"cueflow/internal/config"
+	"cueflow/internal/domain"
 	"cueflow/internal/enrichmentcsv"
 	"cueflow/internal/fixtures"
 	"cueflow/internal/spotify"
@@ -21,6 +24,16 @@ func main() {
 	cfg := config.Load()
 	if os.Args[1] == "spotify-auth" {
 		if err := spotifyAuth(ctx, cfg); err != nil {
+			fatal(err)
+		}
+		return
+	}
+	if os.Args[1] == "analysis-validate" {
+		if len(os.Args) != 3 {
+			usage()
+			os.Exit(2)
+		}
+		if err := analysisValidate(os.Args[2]); err != nil {
 			fatal(err)
 		}
 		return
@@ -65,10 +78,52 @@ func main() {
 		if err := enrichmentImport(ctx, repository, os.Args[2]); err != nil {
 			fatal(err)
 		}
+	case "analysis-import":
+		if len(os.Args) != 3 {
+			usage()
+			os.Exit(2)
+		}
+		if err := analysisImport(ctx, repository, os.Args[2]); err != nil {
+			fatal(err)
+		}
 	default:
 		usage()
 		os.Exit(2)
 	}
+}
+
+func analysisImport(ctx context.Context, repository *store.Postgres, path string) error {
+	analyses, err := readAnalyses(path)
+	if err != nil {
+		return err
+	}
+	if err := repository.UpsertTrackAnalyses(ctx, analyses); err != nil {
+		return fmt.Errorf("apply temporal analysis JSON: %w", err)
+	}
+	fmt.Printf("imported %d versioned full-track analyses\n", len(analyses))
+	return nil
+}
+
+func analysisValidate(path string) error {
+	analyses, err := readAnalyses(path)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("validated %d versioned full-track analyses\n", len(analyses))
+	return nil
+}
+
+func readAnalyses(path string) ([]domain.TrackAnalysis, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("open temporal analysis JSON: %w", err)
+	}
+	defer file.Close()
+	analyses, err := analysisjson.Parse(io.LimitReader(file, 256<<20))
+	if err != nil {
+		return nil, err
+	}
+	return analyses, nil
 }
 
 func enrichmentImport(ctx context.Context, repository *store.Postgres, path string) error {
@@ -104,7 +159,7 @@ func spotifyFeatureCheck(ctx context.Context, cfg config.Config, trackID string)
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: cueflow migrate|seed|spotify-auth|spotify-sync PLAYLIST_ID...|spotify-feature-check TRACK_ID|enrich-import FILE.csv")
+	fmt.Fprintln(os.Stderr, "usage: cueflow migrate|seed|spotify-auth|spotify-sync PLAYLIST_ID...|spotify-feature-check TRACK_ID|enrich-import FILE.csv|analysis-validate FILE.json|analysis-import FILE.json")
 }
 
 func spotifyAuth(ctx context.Context, cfg config.Config) error {
