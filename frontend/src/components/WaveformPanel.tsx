@@ -1,5 +1,7 @@
 import { AudioWaveform } from 'lucide-react'
-import type { TrackWaveform, WaveformPoint } from '../types'
+import { useEffect, useRef, useState } from 'react'
+import { trackWaveform } from '../api'
+import type { SetTrack, TrackWaveform, WaveformPoint } from '../types'
 
 export type WaveformCue = {
   kind: 'in' | 'out'
@@ -11,23 +13,50 @@ type WaveformState =
   | { status: 'idle' | 'loading' | 'error' }
   | { status: 'ready'; value: TrackWaveform }
 
-type Props = {
-  title: string
-  durationSeconds: number
-  state: WaveformState
-  cues: WaveformCue[]
-}
-
-const viewWidth = 1000
-const viewHeight = 88
+const viewWidth = 1600
+const viewHeight = 112
 const center = viewHeight / 2
-const amplitude = 37
-const maxVisiblePoints = 360
+const amplitude = 48
+const maxVisiblePoints = 1200
 
-export function WaveformPanel({ title, durationSeconds, state, cues }: Props) {
+export function WaveformPanel({ item, nextItem }: { item?: SetTrack; nextItem?: SetTrack }) {
+  const requests = useRef(new Map<string, Promise<TrackWaveform>>())
+  const [state, setState] = useState<WaveformState>({ status: 'idle' })
+  const trackID = item?.track.id
+
+  useEffect(() => {
+    if (!trackID) {
+      setState({ status: 'idle' })
+      return
+    }
+    let current = true
+    let request = requests.current.get(trackID)
+    if (!request) {
+      request = trackWaveform(trackID)
+      requests.current.set(trackID, request)
+    }
+    setState({ status: 'loading' })
+    void request.then((value) => {
+      if (current) setState({ status: 'ready', value })
+    }).catch(() => {
+      requests.current.delete(trackID)
+      if (current) setState({ status: 'error' })
+    })
+    return () => { current = false }
+  }, [trackID])
+
+  if (!item) return null
+  const { track } = item
+  const cues: WaveformCue[] = []
+  if (item.position > 1 && item.transition.plan) {
+    cues.push({ kind: 'in', startSeconds: item.transition.plan.toStartSeconds, endSeconds: item.transition.plan.toEndSeconds })
+  }
+  if (nextItem?.transition.plan && nextItem.transition.fromTrackId === track.id) {
+    cues.push({ kind: 'out', startSeconds: nextItem.transition.plan.fromStartSeconds, endSeconds: nextItem.transition.plan.fromEndSeconds })
+  }
   const overview = state.status === 'ready' ? state.value : undefined
   const points = overview?.waveform ?? []
-  const duration = overview?.durationSeconds || durationSeconds
+  const duration = overview?.durationSeconds || track.durationSeconds
   const visiblePoints = downsample(points, maxVisiblePoints)
   const peakPath = envelopePath(visiblePoints, 'peak')
   const rmsPath = envelopePath(visiblePoints, 'rms')
@@ -40,20 +69,24 @@ export function WaveformPanel({ title, durationSeconds, state, cues }: Props) {
   })
 
   return (
-    <section className="waveform-panel" aria-label={`Waveform for ${title}`}>
-      <div className="waveform-heading">
-        <h3><AudioWaveform size={13} /> Waveform</h3>
-        <div className="waveform-legend" aria-label="Waveform layers">
-          <span><i className="peak" /> Peak</span><span><i className="rms" /> RMS</span>
+    <section className="waveform-deck" aria-label={`Full waveform for ${track.title}`}>
+      <header className="waveform-deck-header">
+        <div className="waveform-track">
+          <strong>{String(item.position).padStart(2, '0')}</strong>
+          <div><span>Selected track</span><h2>{track.title}</h2><p>{track.artist}</p></div>
         </div>
-      </div>
+        <div className="waveform-deck-meta">
+          <span><b>{track.bpm}</b> BPM</span><span><b>{track.camelot || '—'}</b> key</span><span><b>{formatTimecode(duration)}</b> full track</span>
+          <div className="waveform-legend" aria-label="Waveform layers"><span><i className="peak" /> Peak</span><span><i className="rms" /> RMS</span></div>
+        </div>
+      </header>
 
       {state.status === 'loading' || state.status === 'idle' ? (
         <div className="waveform-state loading" role="status"><i /><span>Loading waveform…</span></div>
       ) : state.status === 'error' ? (
-        <div className="waveform-state"><strong>Waveform unavailable</strong><span>Select the track again to retry.</span></div>
+        <div className="waveform-state"><AudioWaveform size={18} /><strong>Waveform unavailable</strong><span>Select another track, then return to retry.</span></div>
       ) : points.length === 0 ? (
-        <div className="waveform-state"><strong>No full-track waveform yet</strong><span>Import an authorized recording analysis to see it here.</span></div>
+        <div className="waveform-state"><AudioWaveform size={18} /><strong>Full recording not linked</strong><span>Import or link the complete audio file to build this waveform.</span></div>
       ) : (
         <>
           <div className="waveform-canvas">
@@ -61,13 +94,13 @@ export function WaveformPanel({ title, durationSeconds, state, cues }: Props) {
               viewBox={`0 0 ${viewWidth} ${viewHeight}`}
               preserveAspectRatio="none"
               role="img"
-              aria-label={waveformLabel(title, visibleCues)}
+              aria-label={waveformLabel(track.title, visibleCues)}
             >
-              <title>{waveformLabel(title, visibleCues)}</title>
+              <title>{waveformLabel(track.title, visibleCues)}</title>
               <g className="waveform-grid" aria-hidden="true">
-                <line x1="250" y1="0" x2="250" y2={viewHeight} />
-                <line x1="500" y1="0" x2="500" y2={viewHeight} />
-                <line x1="750" y1="0" x2="750" y2={viewHeight} />
+                <line x1="400" y1="0" x2="400" y2={viewHeight} />
+                <line x1="800" y1="0" x2="800" y2={viewHeight} />
+                <line x1="1200" y1="0" x2="1200" y2={viewHeight} />
               </g>
               {visibleCues.map((cue) => <rect
                 key={`${cue.kind}-${cue.startSeconds}`}

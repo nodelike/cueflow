@@ -1,4 +1,16 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+async function mockDesktopWaveform(page: Page) {
+  await page.evaluate(() => {
+    if (!window.go?.main?.App) return
+    window.go.main.App.TrackWaveform = async (trackId: string) => ({
+      trackId,
+      durationSeconds: 300,
+      analyzerVersion: 'e2e/1',
+      waveform: Array.from({ length: 24 }, (_, index) => ({ startSeconds: index, endSeconds: index + 1, rms: .15 + index % 5 * .04, peak: .4 + index % 7 * .06 })),
+    })
+  })
+}
 
 test('switches to dark mode, uses the acid accent, and remembers the choice', async ({ page }) => {
   await page.goto('/')
@@ -12,7 +24,7 @@ test('switches to dark mode, uses the acid accent, and remembers the choice', as
 
 test('generates, compares, and inspects persisted set variations', async ({ page, request }) => {
   await request.post('http://127.0.0.1:8787/api/seed')
-  await page.route('**/api/tracks/*/waveform', async (route) => {
+  await page.route(/\/api\/tracks\/[^/]+\/waveform(?:\?.*)?$/, async (route) => {
     const trackId = decodeURIComponent(new URL(route.request().url()).pathname.split('/').at(-2) ?? '')
     await route.fulfill({
       contentType: 'application/json',
@@ -25,15 +37,18 @@ test('generates, compares, and inspects persisted set variations', async ({ page
     })
   })
   await page.goto('/')
+  await mockDesktopWaveform(page)
   await expect(page.getByRole('heading', { name: 'Build a set' })).toBeVisible()
   await page.getByRole('button', { name: 'Choose tracks' }).click()
   const picker = page.getByRole('dialog', { name: 'Choose must-play tracks' })
-  await picker.getByRole('searchbox', { name: 'Search tracks' }).fill('claydrums')
-  await picker.getByRole('button', { name: /Clay Drums/ }).click()
+  const firstTrack = picker.getByLabel('Track search results').getByRole('button').first()
+  const requiredTrack = (await firstTrack.locator('strong').textContent())!
+  await firstTrack.click()
   await picker.getByRole('button', { name: 'Done' }).click()
-  await expect(page.getByLabel('Set brief')).toContainText('Clay Drums')
+  await expect(page.getByLabel('Set brief')).toContainText(requiredTrack)
   await page.reload()
-  await expect(page.getByLabel('Set brief')).toContainText('Clay Drums')
+  await mockDesktopWaveform(page)
+  await expect(page.getByLabel('Set brief')).toContainText(requiredTrack)
   await page.getByRole('button', { name: 'Generate set' }).click()
   await expect(page.getByText('Afro to pressure — A')).toBeVisible()
   await expect(page.getByRole('tab')).toHaveCount(3)
@@ -79,9 +94,20 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   const inspector = page.getByLabel('Track and transition inspector')
   await expect(inspector).toContainText('Track 02')
   await expect(inspector).toContainText('Transition in')
-  await expect(inspector.getByRole('img', { name: /Full-track peak and RMS waveform/i })).toBeVisible()
+  const waveformDeck = page.getByLabel(/Full waveform for/i)
+  await expect(waveformDeck.getByRole('img', { name: /Full-track peak and RMS waveform/i })).toBeVisible()
+  expect(await waveformDeck.evaluate((element) => {
+    const workspace = element.closest('.set-workspace')!.getBoundingClientRect()
+    const deck = element.getBoundingClientRect()
+    const inspector = document.querySelector('.track-inspector')!.getBoundingClientRect()
+    return {
+      spansWorkspace: Math.abs(deck.left - workspace.left) < 1 && Math.abs(deck.right - workspace.right) < 1,
+      aboveInspector: deck.bottom < inspector.top,
+      insideInspector: Boolean(element.closest('.track-inspector')),
+    }
+  })).toEqual({ spansWorkspace: true, aboveInspector: true, insideInspector: false })
   for (let index = 0; index < 3; index++) {
     await page.getByRole('tab').nth(index).click()
-    await expect(page.getByLabel('Set track list')).toContainText('Clay Drums')
+    await expect(page.getByLabel('Set track list')).toContainText(requiredTrack)
   }
 })

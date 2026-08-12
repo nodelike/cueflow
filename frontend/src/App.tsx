@@ -7,6 +7,7 @@ import { MixRibbon } from './components/MixRibbon'
 import { ResearchDesk } from './components/ResearchDesk'
 import { SetInspector } from './components/SetInspector'
 import { TrackArtwork } from './components/TrackArtwork'
+import { WaveformPanel } from './components/WaveformPanel'
 import { formatDate, formatDuration } from './lib/format'
 import { getSavedRequiredTrackIDs, getSavedSourcePlaylistIDs, saveRequiredTrackIDs, saveSourcePlaylistIDs } from './lib/preferences'
 import { getInitialTheme, saveTheme, type Theme } from './lib/theme'
@@ -119,6 +120,8 @@ function App() {
 
               {published && <div className="publish-success"><Check size={14} /> Published {published}</div>}
 
+              <WaveformPanel item={activeTrack} nextItem={nextTrack} />
+
               <div className="set-toolbar">
                 <div className="variation-bar" role="tablist" aria-label="Set variations">{drafts.map((draft, index) => <button type="button" role="tab" aria-selected={selectedDraft === index} className={selectedDraft === index ? 'active' : ''} key={draft.id} onClick={() => { setSelectedDraft(index); setSelectedPosition(1) }}><span>{String.fromCharCode(65 + index)}</span>{draft.qualityScore}</button>)}</div>
                 <div className="score-summary"><span>Energy <b>{Math.round(activeDraft.energyFit)}</b></span><span>Harmony <b>{Math.round(activeDraft.harmonicFlow)}</b></span><span>Tempo <b>{Math.round(activeDraft.tempoFlow)}</b></span><span>Safety <b>{Math.round(activeDraft.transitionSafety)}</b></span></div>
@@ -135,7 +138,7 @@ function App() {
                     </button>)}
                   </div>
                 </div>
-                <SetInspector item={activeTrack} nextItem={nextTrack} />
+                <SetInspector item={activeTrack} />
               </div>
             </div>}
           </section>
