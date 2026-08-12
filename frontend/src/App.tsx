@@ -95,6 +95,7 @@ function App() {
 
   const activeDraft = drafts[selectedDraft]
   const activeTrack = activeDraft?.tracks.find((item) => item.position === selectedPosition) ?? activeDraft?.tracks[0]
+  const nextTrack = activeTrack && activeDraft?.tracks.find((item) => item.transition.fromTrackId === activeTrack.track.id)
 
   return (
     <div className="app-shell">
@@ -134,7 +135,7 @@ function App() {
                     </button>)}
                   </div>
                 </div>
-                <SetInspector item={activeTrack} />
+                <SetInspector item={activeTrack} nextItem={nextTrack} />
               </div>
             </div>}
           </section>

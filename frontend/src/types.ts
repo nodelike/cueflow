@@ -34,6 +34,20 @@ export type TrackEnrichment = {
   confidence: number
 }
 
+export type WaveformPoint = {
+  startSeconds: number
+  endSeconds: number
+  rms: number
+  peak: number
+}
+
+export type TrackWaveform = {
+  trackId: string
+  durationSeconds: number
+  analyzerVersion?: string
+  waveform: WaveformPoint[]
+}
+
 export type ScoreComponent = { name: string; score: number; note: string }
 
 export type AutomationPoint = { bar: number; value: number }
@@ -145,6 +159,7 @@ declare global {
           PublishSet: (draftId: string) => Promise<PublishedPlaylist>
           NeedsReview: () => Promise<Track[]>
           EnrichTrack: (input: TrackEnrichment) => Promise<void>
+          TrackWaveform: (trackId: string) => Promise<TrackWaveform>
         }
       }
     }

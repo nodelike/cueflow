@@ -1,4 +1,4 @@
-import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, SpotifyPlaylist, Track, TrackEnrichment } from './types'
+import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, SpotifyPlaylist, Track, TrackEnrichment, TrackWaveform } from './types'
 
 const API_ROOT = import.meta.env.VITE_CUEFLOW_API_URL ?? 'http://127.0.0.1:8787'
 
@@ -77,4 +77,9 @@ export async function enrichTrack(input: TrackEnrichment): Promise<void> {
     const value = await response.json()
     throw new Error(value.error ?? `Cueflow request failed (${response.status})`)
   }
+}
+
+export async function trackWaveform(trackId: string): Promise<TrackWaveform> {
+  if (desktop()) return desktop()!.TrackWaveform(trackId)
+  return json<TrackWaveform>(await fetch(`${API_ROOT}/api/tracks/${encodeURIComponent(trackId)}/waveform`))
 }

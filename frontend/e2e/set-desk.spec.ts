@@ -12,6 +12,18 @@ test('switches to dark mode, uses the acid accent, and remembers the choice', as
 
 test('generates, compares, and inspects persisted set variations', async ({ page, request }) => {
   await request.post('http://127.0.0.1:8787/api/seed')
+  await page.route('**/api/tracks/*/waveform', async (route) => {
+    const trackId = decodeURIComponent(new URL(route.request().url()).pathname.split('/').at(-2) ?? '')
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        trackId,
+        durationSeconds: 300,
+        analyzerVersion: 'e2e/1',
+        waveform: Array.from({ length: 24 }, (_, index) => ({ startSeconds: index, endSeconds: index + 1, rms: .15 + index % 5 * .04, peak: .4 + index % 7 * .06 })),
+      }),
+    })
+  })
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Build a set' })).toBeVisible()
   await page.getByRole('button', { name: 'Choose tracks' }).click()
@@ -67,6 +79,7 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   const inspector = page.getByLabel('Track and transition inspector')
   await expect(inspector).toContainText('Track 02')
   await expect(inspector).toContainText('Transition in')
+  await expect(inspector.getByRole('img', { name: /Full-track peak and RMS waveform/i })).toBeVisible()
   for (let index = 0; index < 3; index++) {
     await page.getByRole('tab').nth(index).click()
     await expect(page.getByLabel('Set track list')).toContainText('Clay Drums')

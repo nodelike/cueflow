@@ -11,6 +11,7 @@ const enrichTrack = vi.fn()
 const spotifyConnected = vi.fn()
 const spotifyPlaylists = vi.fn()
 const syncSpotifyPlaylists = vi.fn()
+const trackWaveform = vi.fn()
 vi.mock('./api', () => ({
   bootstrap: () => bootstrap(),
   generateSets: (...args: unknown[]) => generateSets(...args),
@@ -22,6 +23,7 @@ vi.mock('./api', () => ({
   publishSet: vi.fn(),
   needsReview: () => needsReview(),
   enrichTrack: (...args: unknown[]) => enrichTrack(...args),
+  trackWaveform: (...args: unknown[]) => trackWaveform(...args),
 }))
 
 describe('Cueflow set desk', () => {
@@ -30,13 +32,23 @@ describe('Cueflow set desk', () => {
     document.documentElement.dataset.theme = 'light'
     bootstrap.mockResolvedValue(bootstrapData); generateSets.mockResolvedValue([draft]); needsReview.mockResolvedValue([]); enrichTrack.mockResolvedValue(undefined)
     spotifyConnected.mockResolvedValue(false); spotifyPlaylists.mockResolvedValue([]); syncSpotifyPlaylists.mockResolvedValue(bootstrapData)
+    trackWaveform.mockImplementation((trackID: string) => Promise.resolve({
+      trackId: trackID,
+      durationSeconds: draft.tracks.find((item) => item.track.id === trackID)?.track.durationSeconds ?? 300,
+      analyzerVersion: 'fixture/1',
+      waveform: Array.from({ length: 12 }, (_, index) => ({ startSeconds: index, endSeconds: index + 1, rms: .12 + index * .015, peak: .3 + index * .025 })),
+    }))
   })
 
   it('renders the persisted set and exposes transition reasoning', async () => {
     render(<App />)
     expect(await screen.findByText('Afro to pressure — A')).toBeInTheDocument()
     expect(screen.getByText('heuristic fit')).toBeInTheDocument()
+    expect(await screen.findByRole('img', { name: /Full-track peak and RMS waveform for Salt Horizon/i })).toBeInTheDocument()
+    expect(screen.getByLabelText('Planned cue windows')).toHaveTextContent(/out 04:08–04:40/i)
     await userEvent.click(within(screen.getByLabelText('Set track list')).getByRole('button', { name: /2\. Clay Drums/ }))
+    expect(await screen.findByRole('img', { name: /Full-track peak and RMS waveform for Clay Drums/i })).toBeInTheDocument()
+    expect(screen.getByLabelText('Planned cue windows')).toHaveTextContent(/in 00:00–00:32/i)
     expect(screen.getByText(/rendered-audio validation is still required/i)).toBeInTheDocument()
     expect(screen.getByText(/Transition in · cue-window plan/i)).toBeInTheDocument()
     expect(screen.getByText(/bass exchange at bar 8/i)).toBeInTheDocument()
@@ -136,5 +148,13 @@ describe('Cueflow set desk', () => {
     expect(screen.getByRole('heading', { name: 'Salt Horizon' })).toBeInTheDocument()
     expect(screen.getByText(/Listen beyond the store tag/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Save reviewed features/ })).toBeInTheDocument()
+  })
+
+  it('explains when the selected track has no full-track waveform analysis', async () => {
+    trackWaveform.mockResolvedValue({ trackId: 'one', durationSeconds: 0, waveform: [] })
+    render(<App />)
+    await screen.findByText('Afro to pressure — A')
+    expect(await screen.findByText('No full-track waveform yet')).toBeInTheDocument()
+    expect(screen.getByText(/Import an authorized recording analysis/i)).toBeInTheDocument()
   })
 })
