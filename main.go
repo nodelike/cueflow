@@ -28,8 +28,7 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 12, G: 17, B: 25, A: 255},
 		Mac: &mac.Options{
-			TitleBar:    mac.TitleBarHidden(),
-			DisableZoom: true,
+			TitleBar: mac.TitleBarHidden(),
 		},
 		OnStartup:  app.startup,
 		OnShutdown: app.shutdown,
