@@ -147,3 +147,25 @@ func TestGenerateHonorsGroovePalette(t *testing.T) {
 		}
 	}
 }
+
+func TestRequiredTracksOverrideGroovePalette(t *testing.T) {
+	drafts, err := New().Generate(fixtures.Tracks(), domain.GenerateRequest{
+		Name: "techno with a must-play", DurationMinutes: 30, VariationCount: 3, Arc: "journey",
+		AllowedGrooves: []string{"techno"}, RequiredTrackIDs: []string{"demo-02"}, Seed: 91,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, draft := range drafts {
+		found := false
+		for _, item := range draft.Tracks {
+			if item.Track.ID == "demo-02" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("%s omitted required track outside the selected groove palette", draft.Name)
+		}
+	}
+}

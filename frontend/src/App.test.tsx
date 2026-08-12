@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -25,7 +25,7 @@ describe('Cueflow set desk', () => {
   it('renders the persisted set and exposes transition reasoning', async () => {
     render(<App />)
     expect(await screen.findByText('Afro to pressure — A')).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /2\. Clay Drums/ }))
+    await userEvent.click(within(screen.getByLabelText('Set track list')).getByRole('button', { name: /2\. Clay Drums/ }))
     expect(screen.getByText(/tempo locks cleanly/i)).toBeInTheDocument()
     expect(screen.getByText('adjacent Camelot movement')).toBeInTheDocument()
   })
@@ -33,8 +33,21 @@ describe('Cueflow set desk', () => {
   it('submits the tunable set brief', async () => {
     render(<App />)
     await screen.findByText('Afro to pressure — A')
-    await userEvent.click(screen.getByRole('button', { name: 'Generate set variations' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Generate set' }))
     expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ arc: 'journey', durationMinutes: 60, variationCount: 3 }))
+  })
+
+  it('searches and requires must-play tracks in every generated variation', async () => {
+    render(<App />)
+    await screen.findByText('Afro to pressure — A')
+    await userEvent.click(screen.getByRole('button', { name: 'Choose tracks' }))
+    const picker = screen.getByRole('dialog', { name: 'Choose must-play tracks' })
+    await userEvent.type(within(picker).getByRole('searchbox', { name: 'Search tracks' }), 'Clay')
+    await userEvent.click(within(picker).getByRole('button', { name: /Clay Drums/ }))
+    await userEvent.click(within(picker).getByRole('button', { name: 'Done' }))
+    expect(within(screen.getByLabelText('Set brief')).getByText('Clay Drums')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Generate set' }))
+    expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ requiredTrackIds: ['two'] }))
   })
 
   it('opens the provenance-aware research queue', async () => {

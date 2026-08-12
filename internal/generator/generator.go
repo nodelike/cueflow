@@ -52,9 +52,10 @@ func (g *Generator) Generate(catalog []domain.Track, input domain.GenerateReques
 
 	excluded := makeSet(req.ExcludedTrackIDs)
 	allowedGrooves := makeSet(req.AllowedGrooves)
+	required := makeSet(req.RequiredTrackIDs)
 	pool := make([]domain.Track, 0, len(catalog))
 	for _, track := range catalog {
-		grooveAllowed := len(allowedGrooves) == 0 || allowedGrooves[track.Groove]
+		grooveAllowed := len(allowedGrooves) == 0 || allowedGrooves[track.Groove] || required[track.ID]
 		if grooveAllowed && !excluded[track.ID] && track.DurationSeconds > 0 && track.BPM > 0 && track.Camelot != "" && !track.FeatureNeedsReview {
 			pool = append(pool, track)
 		}
@@ -63,7 +64,6 @@ func (g *Generator) Generate(catalog []domain.Track, input domain.GenerateReques
 		return nil, fmt.Errorf("not enough tracks remain after exclusions")
 	}
 
-	required := makeSet(req.RequiredTrackIDs)
 	for id := range required {
 		if !containsTrack(pool, id) {
 			return nil, fmt.Errorf("required track %q is unavailable", id)
