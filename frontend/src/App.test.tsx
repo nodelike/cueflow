@@ -98,6 +98,25 @@ describe('Cueflow desk', () => {
     expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ arc: 'journey', durationMinutes: 60, variationCount: 3 }))
   })
 
+  it('changes the brief through the custom dropdown, by pointer and by keyboard', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Afro to pressure — A' })
+
+    const length = screen.getByRole('combobox', { name: 'Set length' })
+    await userEvent.click(length)
+    await userEvent.click(screen.getByRole('option', { name: '45 min' }))
+    expect(length).toHaveTextContent('45 min')
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+
+    const arc = screen.getByRole('combobox', { name: 'Energy arc' })
+    arc.focus()
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}{Enter}')
+    expect(arc).toHaveTextContent('Roller')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
+    expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ durationMinutes: 45, arc: 'roller' }))
+  })
+
   it('limits generation to the crates picked in the brief', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: 'Afro to pressure — A' })

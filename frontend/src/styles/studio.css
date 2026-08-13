@@ -14,16 +14,8 @@
 .brief-bar .generate { margin-left: auto; }
 
 .bar-field { display: flex; align-items: center; gap: var(--s2); }
-.bar-field select {
-  height: 32px;
-  padding: 0 var(--s2);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  color: var(--ink);
-  font-size: var(--text-sm);
-}
-.bar-field select:hover { border-color: var(--ink-3); }
+.bar-field .select-trigger { height: 32px; font-size: var(--text-sm); }
+.brief-bar .btn, .brief-bar .popover-holder > .btn { height: 32px; }
 
 .pin-search { flex: 1 1 260px; max-width: 340px; position: relative; }
 .pin-search .search { height: 32px; }

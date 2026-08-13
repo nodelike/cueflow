@@ -23,7 +23,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 a { color: var(--accent); }
 
-:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-xs); }
+:focus { outline: none; }
+:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--accent); }
 
 /* Scroll regions: isolated, quiet, never move the window. */
 .scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
@@ -147,7 +148,7 @@ a { color: var(--accent); }
 /* Fields --------------------------------------------------------------- */
 .field { display: grid; gap: var(--s2); min-width: 0; }
 .field > span { color: var(--ink-2); font-size: var(--text-sm); font-weight: 550; }
-.field input, .field select, .field textarea {
+.field input, .field textarea {
   width: 100%;
   min-width: 0;
   height: 36px;
@@ -161,13 +162,12 @@ a { color: var(--accent); }
   transition: border-color var(--fast), box-shadow var(--fast);
 }
 .field textarea { height: auto; min-height: 72px; padding: var(--s2) var(--s3); resize: vertical; line-height: 1.5; }
-.field input:hover, .field select:hover, .field textarea:hover { border-color: var(--ink-3); }
-.field input:focus, .field select:focus, .field textarea:focus {
+.field input:hover, .field textarea:hover { border-color: var(--ink-3); }
+.field input:focus, .field textarea:focus {
   outline: 0;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-wash);
 }
-.field select option { background: var(--surface); color: var(--ink); }
+.field .select, .field .select-trigger { width: 100%; height: 36px; }
 
 .range { display: grid; gap: var(--s2); }
 .range > span { display: flex; justify-content: space-between; color: var(--ink-2); font-size: var(--text-sm); }
@@ -201,7 +201,7 @@ a { color: var(--accent); }
   color: var(--ink-3);
   transition: border-color var(--fast), box-shadow var(--fast);
 }
-.search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-wash); }
+.search:focus-within { border-color: var(--accent); }
 .search input { width: 100%; border: 0; outline: 0; background: transparent; font-size: var(--text-base); }
 .search input::-webkit-search-cancel-button { appearance: none; }
 
@@ -268,6 +268,63 @@ a { color: var(--accent); }
   overflow: hidden;
 }
 .level > span { width: 100%; border-radius: 2px; background: var(--meter); }
+
+
+/* Select: our own dropdown, so a menu never arrives styled by the OS. */
+.select { position: relative; display: inline-flex; min-width: 0; }
+.select-trigger {
+  width: 100%;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: 0 var(--s2) 0 var(--s3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-base);
+  transition: border-color var(--fast), background var(--fast);
+}
+.select-trigger:hover { border-color: var(--ink-3); }
+.select-trigger[aria-expanded='true'] { border-color: var(--accent); }
+.select-trigger svg { flex: 0 0 auto; color: var(--ink-3); }
+.select-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: max-content;
+  min-width: 100%;
+  max-width: 320px;
+  z-index: 70;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: var(--s1);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  background: var(--raised);
+  box-shadow: var(--shadow-lg);
+}
+.select-list::-webkit-scrollbar { display: none; }
+.select-option {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s2);
+  height: 30px;
+  padding: 0 var(--s2);
+  border-radius: var(--r-xs);
+  color: var(--ink-2);
+  font-size: var(--text-base);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.select-option i { display: grid; place-items: center; color: var(--accent); }
+.select-option.active { background: var(--hover); color: var(--ink); }
+.select-option[aria-selected='true'] { color: var(--ink); font-weight: 550; }
 
 /* Panels, empty states, dialogs ----------------------------------------- */
 .panel { border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }

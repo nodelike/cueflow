@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { padPosition } from '../lib/format'
 import type { Track, TrackEnrichment } from '../types'
 import { Artwork } from '../components/common/Artwork'
+import { Select } from '../components/common/Select'
 import { SectionHeader } from '../components/shell/SectionHeader'
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
 
 const grooves = ['afro', 'tribal', 'house', 'tech-house', 'techno']
 const roles = ['opener', 'builder', 'bridge', 'lifter', 'peak', 'reset', 'vocal', 'closer']
+const options = (values: string[]) => values.map((value) => ({ value, label: value }))
 
 /** Verify BPM, key, feel, and role by ear before a track can enter generation. */
 export function ResearchView({ tracks, busy, onSave }: Props) {
@@ -109,18 +111,14 @@ export function ResearchView({ tracks, busy, onSave }: Props) {
 
                 <fieldset>
                   <legend>Structural feel</legend>
-                  <label className="field">
+                  <div className="field">
                     <span>Groove</span>
-                    <select value={form.groove} onChange={(event) => patch({ groove: event.target.value })}>
-                      {grooves.map((groove) => <option key={groove}>{groove}</option>)}
-                    </select>
-                  </label>
-                  <label className="field">
+                    <Select value={form.groove} options={options(grooves)} ariaLabel="Groove" onChange={(next) => patch({ groove: next })} />
+                  </div>
+                  <div className="field">
                     <span>Set role</span>
-                    <select value={form.role} onChange={(event) => patch({ role: event.target.value })}>
-                      {roles.map((role) => <option key={role}>{role}</option>)}
-                    </select>
-                  </label>
+                    <Select value={form.role} options={options(roles)} ariaLabel="Set role" onChange={(next) => patch({ role: next })} />
+                  </div>
                   <label className="range">
                     <span>Energy <b>{Math.round(form.energy * 100)}</b></span>
                     <input type="range" min="0" max="1" step="0.01" value={form.energy} onChange={(event) => patch({ energy: Number(event.target.value) })} />

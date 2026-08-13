@@ -1,6 +1,7 @@
 import { Dices, Sparkles, Waves } from 'lucide-react'
 import type { GenerateRequest, Section, SourcePlaylist, Track } from '../../types'
 import { Popover } from '../common/Popover'
+import { Select } from '../common/Select'
 import { PinSearch } from './PinSearch'
 
 type Props = {
@@ -21,6 +22,7 @@ const arcs = [
   { value: 'peak', label: 'Peak-time' },
   { value: 'sunset', label: 'Sunset' },
 ]
+const lengths = [15, 30, 45, 60, 75, 90, 120].map((minutes) => ({ value: String(minutes), label: `${minutes} min` }))
 
 /** The whole brief on one strip: the frequent knobs inline, the rest one click away. */
 export function BriefBar({ value, tracks, crates, eligibleCount, busy, onChange, onGenerate, onNavigate }: Props) {
@@ -43,19 +45,20 @@ export function BriefBar({ value, tracks, crates, eligibleCount, busy, onChange,
     <div className="brief-bar" aria-label="Set brief">
       <PinSearch tracks={tracks} pinnedIDs={value.requiredTrackIds} onPin={(id) => toggleList('requiredTrackIds', id)} />
 
-      <label className="bar-field">
+      <div className="bar-field">
         <span className="eyebrow">Length</span>
-        <select value={value.durationMinutes} onChange={(event) => update('durationMinutes', Number(event.target.value))} aria-label="Set length">
-          {[15, 30, 45, 60, 75, 90, 120].map((minutes) => <option key={minutes} value={minutes}>{minutes} min</option>)}
-        </select>
-      </label>
+        <Select
+          value={String(value.durationMinutes)}
+          options={lengths}
+          ariaLabel="Set length"
+          onChange={(next) => update('durationMinutes', Number(next))}
+        />
+      </div>
 
-      <label className="bar-field">
+      <div className="bar-field">
         <span className="eyebrow">Arc</span>
-        <select value={value.arc} onChange={(event) => update('arc', event.target.value)} aria-label="Energy arc">
-          {arcs.map((arc) => <option key={arc.value} value={arc.value}>{arc.label}</option>)}
-        </select>
-      </label>
+        <Select value={value.arc} options={arcs} ariaLabel="Energy arc" onChange={(next) => update('arc', next)} />
+      </div>
 
       <Popover label={<span className="truncate">{crateLabel}</span>} ariaLabel="Choose crates" width={264}>
         <div className="popover-head">

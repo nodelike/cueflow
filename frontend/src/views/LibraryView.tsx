@@ -5,6 +5,7 @@ import { matches } from '../lib/search'
 import type { Section, SourcePlaylist, Track } from '../types'
 import { Artwork } from '../components/common/Artwork'
 import { CamelotKey } from '../components/common/CamelotKey'
+import { Select } from '../components/common/Select'
 import { LevelMeter } from '../components/common/LevelMeter'
 import { SectionHeader } from '../components/shell/SectionHeader'
 
@@ -71,12 +72,10 @@ export function LibraryView({ tracks, crates, onNavigate }: Props) {
             aria-label="Search the library"
           />
         </label>
-        <label className="inline-field">
+        <div className="inline-field">
           <span className="eyebrow">Sort</span>
-          <select value={sort} onChange={(event) => setSort(event.target.value as Sort)} aria-label="Sort library">
-            {sorts.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-          </select>
-        </label>
+          <Select value={sort} options={sorts} ariaLabel="Sort library" onChange={(next) => setSort(next as Sort)} />
+        </div>
       </SectionHeader>
 
       <div className="section-body library">

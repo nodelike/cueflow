@@ -24,8 +24,10 @@ test('reviews a synced track and clears it from the queue', async ({ page, reque
   await page.getByLabel('BPM').fill('127.8')
   await page.getByLabel('Musical key').fill('A minor')
   await page.getByLabel('Camelot').fill('8A')
-  await page.getByLabel('Groove').selectOption('tech-house')
-  await page.getByLabel('Set role').selectOption('builder')
+  await page.getByLabel('Groove').click()
+  await page.getByRole('option', { name: 'tech-house' }).click()
+  await page.getByLabel('Set role').click()
+  await page.getByRole('option', { name: 'builder' }).click()
   await page.getByLabel('Provenance').fill('Manual structure review + https://example.test/track-evidence')
   await page.getByRole('button', { name: 'Save reviewed features' }).click()
 
