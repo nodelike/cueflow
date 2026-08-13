@@ -86,7 +86,7 @@ test('generates, compares, and inspects persisted set variations', async ({ page
       trackRowHeight: document.querySelector('.ledger-scroll > button')!.getBoundingClientRect().height,
     }
   })
-  expect(readability).toEqual({ control: 14, sectionLabel: 12, trackTitle: 13, trackArtist: 11, inspectorTitle: 22, primaryAction: 14, trackRowHeight: 52 })
+  expect(readability).toEqual({ control: 14, sectionLabel: 12, trackTitle: 16, trackArtist: 13, inspectorTitle: 22, primaryAction: 14, trackRowHeight: 64 })
   const windowChrome = await page.evaluate(() => ({
     titlebarHeight: document.querySelector('.app-header')!.getBoundingClientRect().height,
     workspaceRows: getComputedStyle(document.querySelector('.app-shell')!).gridTemplateRows,

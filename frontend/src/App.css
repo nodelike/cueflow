@@ -323,6 +323,18 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .track-ledger b { font-size: 11px; }
 .camelot-key.compact { font-size: 10px; }
 
+/* Playlist ledger scale: give track titles the same reading weight as the workspace headings. */
+.track-ledger { grid-template-rows: 39px minmax(0, 1fr); }
+.ledger-head { height: 39px; grid-template-columns: 32px 44px minmax(240px,1fr) 58px 54px 68px; gap: 8px; padding: 0 12px; font-size: 12px; }
+.ledger-scroll > button { min-height: 64px; grid-template-columns: 32px 44px minmax(240px,1fr) 58px 54px 68px; gap: 8px; padding: 8px 12px; }
+.ledger-scroll .track-artwork { width: 40px; height: 40px; }
+.ledger-scroll > button > span:first-child { font-size: 11px; }
+.track-ledger strong { font-size: 16px; line-height: 1.15; }
+.track-ledger small { font-size: 13px; line-height: 1.25; }
+.track-ledger b { font-size: 13px; }
+.camelot-key.compact { min-width: 34px; height: 25px; font-size: 12px; }
+.ledger-scroll > button > i { width: 60px; height: 5px; }
+
 .track-inspector > * { font-size: 12px; }
 .inspector-title > div > span { font-size: 10px; }
 .track-inspector h2 { font-size: 22px; }
@@ -391,6 +403,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   .waveform-cue-readout { margin-top: 3px; }
   .sequence-overview { height: 52px; padding-top: 6px; }
   .sequence-overview button { height: 39px; }
+  .track-ledger { grid-template-rows: 37px minmax(0, 1fr); }
+  .ledger-head { height: 37px; grid-template-columns: 28px 40px minmax(190px,1fr) 50px 50px 60px; gap: 7px; padding: 0 10px; font-size: 11px; }
+  .ledger-scroll > button { min-height: 58px; grid-template-columns: 28px 40px minmax(190px,1fr) 50px 50px 60px; gap: 7px; padding: 7px 10px; }
+  .ledger-scroll .track-artwork { width: 38px; height: 38px; }
+  .ledger-scroll > button > span:first-child { font-size: 11px; }
+  .track-ledger strong { font-size: 15px; }
+  .track-ledger small { font-size: 12px; }
+  .track-ledger b { font-size: 12px; }
+  .camelot-key.compact { min-width: 32px; height: 24px; font-size: 11px; }
+  .ledger-scroll > button > i { width: 55px; height: 5px; }
   .track-inspector:has(.transition-check) .transition-check > header span,
   .track-inspector:has(.transition-check) .transition-check > header strong { font-size: 10px; }
   .track-inspector:has(.transition-check) .transition-target > div > span,
