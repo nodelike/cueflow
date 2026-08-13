@@ -14,6 +14,9 @@ const syncSpotifyPlaylists = vi.fn()
 const trackWaveform = vi.fn()
 const saveTransitionFeedback = vi.fn()
 const tidalStatus = vi.fn()
+const tidalSavedSets = vi.fn()
+const publishTidalPreviews = vi.fn()
+const saveTidalSet = vi.fn()
 vi.mock('./api', () => ({
   bootstrap: () => bootstrap(),
   generateSets: (...args: unknown[]) => generateSets(...args),
@@ -23,8 +26,11 @@ vi.mock('./api', () => ({
   syncSpotifyPlaylists: (...args: unknown[]) => syncSpotifyPlaylists(...args),
   connectSpotify: vi.fn(),
   tidalStatus: () => tidalStatus(),
+  tidalSavedSets: () => tidalSavedSets(),
   connectTidal: vi.fn(),
   probeTidalCapabilities: vi.fn(),
+  publishTidalPreviews: (...args: unknown[]) => publishTidalPreviews(...args),
+  saveTidalSet: (...args: unknown[]) => saveTidalSet(...args),
   publishSet: vi.fn(),
   needsReview: () => needsReview(),
   enrichTrack: (...args: unknown[]) => enrichTrack(...args),
@@ -41,6 +47,9 @@ describe('Cueflow desk', () => {
     bootstrap.mockResolvedValue(bootstrapData); generateSets.mockResolvedValue([draft]); needsReview.mockResolvedValue([]); enrichTrack.mockResolvedValue(undefined)
     spotifyConnected.mockResolvedValue(false); spotifyPlaylists.mockResolvedValue([]); syncSpotifyPlaylists.mockResolvedValue(bootstrapData)
     tidalStatus.mockResolvedValue({ configured: false, connected: false, grantedScopes: [] })
+    tidalSavedSets.mockResolvedValue([])
+    publishTidalPreviews.mockResolvedValue({ playlists: [], matchedTracks: 0, deletedPrevious: 0, warnings: [] })
+    saveTidalSet.mockResolvedValue({ playlistId: 'tidal-set-a', draftId: draft.id, sessionId: draft.sessionId, variation: draft.variation, name: `Cueflow Set — ${draft.name}`, trackCount: draft.tracks.length, createdAt: '2026-08-14T12:00:00Z' })
     trackWaveform.mockImplementation((trackID: string) => Promise.resolve({
       trackId: trackID,
       durationSeconds: draft.tracks.find((item) => item.track.id === trackID)?.track.durationSeconds ?? 300,
@@ -96,6 +105,27 @@ describe('Cueflow desk', () => {
     await screen.findByRole('heading', { name: 'Afro to pressure — A' })
     await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
     expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ arc: 'journey', durationMinutes: 60, variationCount: 3 }))
+  })
+
+  it('makes the djay preview-to-permanent lifecycle explicit', async () => {
+    tidalStatus.mockResolvedValue({ configured: true, connected: true, grantedScopes: ['playlists.write'] })
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Afro to pressure — A' })
+
+    await userEvent.click(screen.getByRole('button', { name: /Try all in djay/ }))
+    await waitFor(() => expect(publishTidalPreviews).toHaveBeenCalledWith([draft.id]))
+
+    await userEvent.click(screen.getByRole('button', { name: /Save A as set/ }))
+    await waitFor(() => expect(saveTidalSet).toHaveBeenCalledWith(draft.id))
+    expect(screen.getByRole('button', { name: /A saved/ })).toBeDisabled()
+  })
+
+  it('restores permanent-set status after a restart', async () => {
+    tidalStatus.mockResolvedValue({ configured: true, connected: true, grantedScopes: ['playlists.write'] })
+    tidalSavedSets.mockResolvedValue([{ playlistId: 'tidal-set-a', draftId: draft.id, sessionId: draft.sessionId, variation: 1, name: `Cueflow Set — ${draft.name}`, trackCount: 2, createdAt: '2026-08-14T12:00:00Z' }])
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Afro to pressure — A' })
+    expect(screen.getByRole('button', { name: /A saved/ })).toBeDisabled()
   })
 
   it('changes the brief through the custom dropdown, by pointer and by keyboard', async () => {

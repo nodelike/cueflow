@@ -1,17 +1,53 @@
-/* Studio: brief on one strip, then two working panels — playlist and evidence. */
+/* Studio: the brief on top, then two working panels — playlist and evidence. */
 
-.studio { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+.studio { min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
 
-/* Brief bar -------------------------------------------------------------- */
+/* Brief bar: the topmost strip, so it also carries the window drag region. */
 .brief-bar {
+  --wails-draggable: drag;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: var(--s2);
-  padding: var(--s2) var(--s5);
+  padding: var(--titlebar-inset) var(--s5);
   border-bottom: 1px solid var(--line);
   background: var(--surface);
+  user-select: none;
 }
+.brief-bar button, .brief-bar input, .brief-bar label, .brief-bar .select { --wails-draggable: no-drag; }
 .brief-bar .generate { margin-left: auto; }
+
+/* Set header: what was built, and what can be done with it. */
+.set-header {
+  flex: 0 0 auto;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s5);
+  padding: var(--s2) var(--s5);
+  border-bottom: 1px solid var(--line);
+}
+.set-title { min-width: 0; display: grid; gap: 1px; }
+.set-title h1 { font-size: var(--text-lg); }
+.set-title p { color: var(--ink-2); font-size: var(--text-sm); }
+.set-actions { flex: 0 0 auto; display: flex; align-items: center; gap: var(--s2); }
+
+/* Audition is temporary; only the second, deliberate step becomes permanent. */
+.djay-flow { display: inline-flex; align-items: center; gap: var(--s1); padding-left: var(--s1); border-left: 1px solid var(--line); }
+.djay-step { padding-left: var(--s2); }
+.djay-step .step-number {
+  width: 17px;
+  height: 17px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font: 700 9px/1 var(--font-mono);
+  opacity: .62;
+}
+.djay-arrow { flex: 0 0 auto; color: var(--ink-3); }
+.djay-step.saved { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); background: color-mix(in srgb, var(--ok) 10%, var(--surface)); color: var(--ok); opacity: 1; }
 
 .bar-field { display: flex; align-items: center; gap: var(--s2); }
 .bar-field .select-trigger { height: 32px; font-size: var(--text-sm); }
@@ -60,6 +96,7 @@
 
 /* Two working panels ----------------------------------------------------- */
 .studio-main {
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   display: grid;
@@ -68,11 +105,13 @@
   padding: var(--s3) var(--s5) var(--s4);
   overflow: hidden;
 }
+.playlist-head + .studio-main { padding-top: var(--s2); }
 .studio-main.empty { grid-template-columns: minmax(0, 1fr); }
 .studio-column { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: var(--s3); overflow: hidden; }
 .studio-column > .empty { flex: 1 1 auto; }
 
-.pinned-strip { flex: 0 0 auto; display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); }
+.playlist-head { flex: 0 0 auto; display: flex; align-items: center; flex-wrap: wrap; gap: var(--s3); padding: var(--s3) var(--s5) 0; }
+.pinned-strip { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); }
 .pinned-strip > .eyebrow { margin-right: var(--s1); }
 .pinned-chip {
   display: inline-flex;
