@@ -142,6 +142,13 @@ func (a *App) ProbeTidalCapabilities(trackID string) (tidal.CapabilityReport, er
 	return a.service.ProbeTidalCapabilities(a.ctx, trackID)
 }
 
+func (a *App) PublishTidalPreviews(draftIDs []string) (tidal.PreviewBatch, error) {
+	if a.service == nil {
+		return tidal.PreviewBatch{}, fmt.Errorf("Cueflow is not ready")
+	}
+	return a.service.PublishTidalPreviews(a.ctx, draftIDs)
+}
+
 func (a *App) PublishSet(draftID string) (spotify.Playlist, error) {
 	if a.service == nil {
 		return spotify.Playlist{}, fmt.Errorf("Cueflow is not ready")

@@ -33,6 +33,7 @@ func New(svc *service.Service, logger *slog.Logger) http.Handler {
 	router.Post("/api/spotify/playlists/sync", server.syncSpotifyPlaylists)
 	router.Get("/api/tidal/status", server.tidalStatus)
 	router.Post("/api/tidal/capabilities/probe", server.probeTidalCapabilities)
+	router.Post("/api/tidal/previews", server.publishTidalPreviews)
 	router.Post("/api/sets/{id}/publish", server.publish)
 	router.Put("/api/transitions/{from}/to/{to}/feedback", server.saveTransitionFeedback)
 	router.Get("/api/research/queue", server.researchQueue)
@@ -147,6 +148,24 @@ func (s *Server) probeTidalCapabilities(writer http.ResponseWriter, request *htt
 		return
 	}
 	writeJSON(writer, http.StatusOK, report)
+}
+
+func (s *Server) publishTidalPreviews(writer http.ResponseWriter, request *http.Request) {
+	var input struct {
+		DraftIDs []string `json:"draftIds"`
+	}
+	decoder := json.NewDecoder(http.MaxBytesReader(writer, request.Body, 1<<20))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		writeError(writer, http.StatusBadRequest, err)
+		return
+	}
+	result, err := s.service.PublishTidalPreviews(request.Context(), input.DraftIDs)
+	if err != nil {
+		writeError(writer, http.StatusUnprocessableEntity, err)
+		return
+	}
+	writeJSON(writer, http.StatusCreated, result)
 }
 
 func (s *Server) publish(writer http.ResponseWriter, request *http.Request) {

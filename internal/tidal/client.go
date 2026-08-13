@@ -114,6 +114,34 @@ func (c *Client) PlaylistItemIDs(ctx context.Context, playlistID string) ([]stri
 	return ids, nil
 }
 
+// TrackIDsByISRC resolves exact recording identities without fuzzy title
+// matching. TIDAL returns at most one track per ISRC when multiple ISRCs are
+// requested, making the result safe for playlist publication.
+func (c *Client) TrackIDsByISRC(ctx context.Context, isrcs []string) (map[string]TrackIdentity, error) {
+	result := make(map[string]TrackIdentity, len(isrcs))
+	for start := 0; start < len(isrcs); start += 20 {
+		end := min(start+20, len(isrcs))
+		query := url.Values{}
+		for _, isrc := range isrcs[start:end] {
+			isrc = strings.TrimSpace(isrc)
+			if isrc == "" {
+				return nil, fmt.Errorf("ISRC cannot be empty")
+			}
+			query.Add("filter[isrc]", isrc)
+		}
+		var document resourcesDocument
+		if err := c.sendJSON(ctx, http.MethodGet, "/tracks?"+query.Encode(), nil, &document, false); err != nil {
+			return nil, err
+		}
+		for _, track := range document.Data {
+			if track.Type == "tracks" && track.ID != "" && track.Attributes.ISRC != "" {
+				result[track.Attributes.ISRC] = TrackIdentity{ID: track.ID, ISRC: track.Attributes.ISRC, Title: track.Attributes.Title}
+			}
+		}
+	}
+	return result, nil
+}
+
 func (c *Client) DeletePlaylist(ctx context.Context, playlistID string) error {
 	playlist, err := c.Playlist(ctx, playlistID)
 	if err != nil {

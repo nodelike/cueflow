@@ -132,3 +132,22 @@ func TestPublishSetRejectsUnsafeTargetsAndOnlyAppends(t *testing.T) {
 		}
 	}
 }
+
+func TestTrackISRCsBatchesExactRecordingIdentities(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/tracks" || request.URL.Query().Get("ids") != "one,two" {
+			t.Fatalf("unexpected request %s", request.URL.String())
+		}
+		writer.Write([]byte(`{"tracks":[{"id":"one","external_ids":{"isrc":"ISRCONE"}},{"id":"two","external_ids":{"isrc":"ISRCTWO"}}]}`))
+	}))
+	defer server.Close()
+	store := &memoryStore{token: Token{AccessToken: "access", RefreshToken: "refresh", ExpiresAt: time.Now().Add(time.Hour)}}
+	client := &Client{Store: store, APIBase: server.URL, HTTPClient: server.Client()}
+	identities, err := client.TrackISRCs(context.Background(), []string{"one", "two"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identities["one"] != "ISRCONE" || identities["two"] != "ISRCTWO" {
+		t.Fatalf("unexpected identities: %#v", identities)
+	}
+}

@@ -71,6 +71,13 @@ type spotifyTrack struct {
 	Album struct {
 		Images []image `json:"images"`
 	} `json:"album"`
+	ExternalIDs struct {
+		ISRC string `json:"isrc"`
+	} `json:"external_ids"`
+}
+
+type tracksResponse struct {
+	Tracks []spotifyTrack `json:"tracks"`
 }
 
 type SyncedTrack struct {

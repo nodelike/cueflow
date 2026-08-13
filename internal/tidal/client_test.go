@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -146,5 +147,60 @@ func TestStatusHandlesMissingToken(t *testing.T) {
 	status := client.Status()
 	if !status.Configured || status.Connected || len(status.GrantedScopes) != 0 {
 		t.Fatalf("unexpected status: %#v", status)
+	}
+}
+
+func TestTrackIDsByISRCUsesExactCatalogFilter(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path != "/tracks" {
+			t.Fatalf("unexpected path %s", request.URL.Path)
+		}
+		values := request.URL.Query()["filter[isrc]"]
+		if strings.Join(values, ",") != "ISRCONE,ISRCTWO" {
+			t.Fatalf("unexpected ISRC filters: %#v", values)
+		}
+		writer.Write([]byte(`{"data":[{"type":"tracks","id":"tidal-one","attributes":{"isrc":"ISRCONE","title":"One"}},{"type":"tracks","id":"tidal-two","attributes":{"isrc":"ISRCTWO","title":"Two"}}]}`))
+	}))
+	defer server.Close()
+	store := &memoryStore{token: Token{AccessToken: "access", RefreshToken: "refresh", ExpiresAt: time.Now().Add(time.Hour)}}
+	client := &Client{ClientID: "client", Store: store, APIBase: server.URL, HTTPClient: server.Client()}
+	identities, err := client.TrackIDsByISRC(context.Background(), []string{"ISRCONE", "ISRCTWO"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if identities["ISRCONE"].ID != "tidal-one" || identities["ISRCTWO"].ID != "tidal-two" {
+		t.Fatalf("unexpected identities: %#v", identities)
+	}
+}
+
+func TestAddPlaylistItemsAppendsInTidalBatches(t *testing.T) {
+	addCalls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.Method + " " + request.URL.Path {
+		case "GET /playlists/preview":
+			writer.Write([]byte(`{"data":{"type":"playlists","id":"preview","attributes":{"name":"Cueflow Preview — Session A"}}}`))
+		case "POST /playlists/preview/relationships/items":
+			addCalls++
+			payload, _ := io.ReadAll(request.Body)
+			if !strings.Contains(string(payload), `"positionBefore":""`) || request.Header.Get("Idempotency-Key") == "" {
+				t.Fatalf("invalid add request: %s", payload)
+			}
+			writer.Write([]byte(`{"data":[]}`))
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+	store := &memoryStore{token: Token{AccessToken: "access", RefreshToken: "refresh", ExpiresAt: time.Now().Add(time.Hour)}}
+	client := &Client{ClientID: "client", Store: store, APIBase: server.URL, HTTPClient: server.Client()}
+	ids := make([]string, 51)
+	for index := range ids {
+		ids[index] = fmt.Sprintf("track-%d", index)
+	}
+	if err := client.AddPlaylistItems(context.Background(), "preview", ids, ""); err != nil {
+		t.Fatal(err)
+	}
+	if addCalls != 2 {
+		t.Fatalf("expected two TIDAL batches, got %d", addCalls)
 	}
 }

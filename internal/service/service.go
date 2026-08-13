@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"cueflow/internal/domain"
 	"cueflow/internal/fixtures"
@@ -42,6 +43,137 @@ func (s *Service) ProbeTidalCapabilities(ctx context.Context, trackID string) (t
 		return tidal.CapabilityReport{}, fmt.Errorf("TIDAL is not configured")
 	}
 	return s.tidal.ProbeCapabilities(ctx, trackID)
+}
+
+// PublishTidalPreviews publishes a whole generated session so its variations
+// can be compared in djay Pro. Exact ISRC matching prevents a similarly named
+// remix or re-recording from being substituted silently.
+func (s *Service) PublishTidalPreviews(ctx context.Context, draftIDs []string) (tidal.PreviewBatch, error) {
+	result := tidal.PreviewBatch{Playlists: []tidal.PreviewPlaylist{}, Warnings: []string{}}
+	if s.spotify == nil || !s.spotify.Connected() {
+		return result, fmt.Errorf("Spotify is not connected; Cueflow needs Spotify recording IDs to resolve exact TIDAL tracks")
+	}
+	if s.tidal == nil || !s.tidal.Connected() {
+		return result, fmt.Errorf("TIDAL is not connected")
+	}
+	if len(draftIDs) == 0 {
+		return result, fmt.Errorf("select at least one generated variation")
+	}
+
+	drafts := make([]domain.SetDraft, 0, len(draftIDs))
+	spotifyIDs := []string{}
+	trackBySpotifyID := map[string]domain.Track{}
+	seenSpotifyID := map[string]bool{}
+	sessionID := ""
+	for _, draftID := range draftIDs {
+		draft, err := s.store.GetDraft(ctx, draftID)
+		if err != nil {
+			return result, err
+		}
+		if sessionID == "" {
+			sessionID = draft.SessionID
+		} else if draft.SessionID != sessionID {
+			return result, fmt.Errorf("TIDAL previews must come from one generation session")
+		}
+		drafts = append(drafts, draft)
+		for _, item := range draft.Tracks {
+			id := strings.TrimSpace(item.Track.SpotifyID)
+			if id == "" {
+				return result, fmt.Errorf("%s has no Spotify recording identity", item.Track.Title)
+			}
+			trackBySpotifyID[id] = item.Track
+			if !seenSpotifyID[id] {
+				spotifyIDs = append(spotifyIDs, id)
+				seenSpotifyID[id] = true
+			}
+		}
+	}
+
+	isrcBySpotifyID, err := s.spotify.TrackISRCs(ctx, spotifyIDs)
+	if err != nil {
+		return result, fmt.Errorf("resolve Spotify recording identities: %w", err)
+	}
+	isrcs := make([]string, 0, len(spotifyIDs))
+	missing := []string{}
+	for _, spotifyID := range spotifyIDs {
+		isrc := isrcBySpotifyID[spotifyID]
+		if isrc == "" {
+			missing = append(missing, trackBySpotifyID[spotifyID].Title)
+			continue
+		}
+		isrcs = append(isrcs, isrc)
+	}
+	if len(missing) > 0 {
+		return result, fmt.Errorf("Spotify did not provide ISRCs for: %s", strings.Join(missing, ", "))
+	}
+	tidalByISRC, err := s.tidal.TrackIDsByISRC(ctx, isrcs)
+	if err != nil {
+		return result, fmt.Errorf("resolve tracks in TIDAL: %w", err)
+	}
+	tidalIDBySpotifyID := make(map[string]string, len(spotifyIDs))
+	for _, spotifyID := range spotifyIDs {
+		isrc := isrcBySpotifyID[spotifyID]
+		identity, ok := tidalByISRC[isrc]
+		if !ok {
+			missing = append(missing, trackBySpotifyID[spotifyID].Title+" — "+trackBySpotifyID[spotifyID].Artist)
+			continue
+		}
+		tidalIDBySpotifyID[spotifyID] = identity.ID
+	}
+	if len(missing) > 0 {
+		return result, fmt.Errorf("not available as exact recordings on TIDAL: %s", strings.Join(missing, "; "))
+	}
+	result.MatchedTracks = len(tidalIDBySpotifyID)
+
+	created := []tidal.PreviewPlaylist{}
+	cleanupCreated := func() {
+		for _, preview := range created {
+			_ = s.tidal.DeletePlaylist(context.Background(), preview.PlaylistID)
+		}
+	}
+	for _, draft := range drafts {
+		name := "Cueflow Preview — " + draft.Name
+		playlist, err := s.tidal.CreatePlaylist(ctx, name, "Disposable Cueflow variation for testing in djay Pro. Replaced on the next preview publish.")
+		if err != nil {
+			cleanupCreated()
+			return result, fmt.Errorf("create TIDAL preview for %s: %w", draft.Name, err)
+		}
+		preview := tidal.PreviewPlaylist{PlaylistID: playlist.ID, DraftID: draft.ID, SessionID: draft.SessionID, Variation: draft.Variation, Name: playlist.Name, CreatedAt: time.Now().UTC()}
+		created = append(created, preview)
+		trackIDs := make([]string, 0, len(draft.Tracks))
+		for _, item := range draft.Tracks {
+			trackIDs = append(trackIDs, tidalIDBySpotifyID[item.Track.SpotifyID])
+		}
+		if err := s.tidal.AddPlaylistItems(ctx, playlist.ID, trackIDs, ""); err != nil {
+			cleanupCreated()
+			return result, fmt.Errorf("fill TIDAL preview for %s: %w", draft.Name, err)
+		}
+	}
+
+	previous, err := s.store.TidalPreviews(ctx)
+	if err != nil {
+		cleanupCreated()
+		return result, err
+	}
+	tracked := append(append([]tidal.PreviewPlaylist{}, previous...), created...)
+	if err := s.store.ReplaceTidalPreviews(ctx, tracked); err != nil {
+		cleanupCreated()
+		return result, err
+	}
+	failedPrevious := []tidal.PreviewPlaylist{}
+	for _, preview := range previous {
+		if err := s.tidal.DeletePlaylist(ctx, preview.PlaylistID); err != nil {
+			failedPrevious = append(failedPrevious, preview)
+			result.Warnings = append(result.Warnings, fmt.Sprintf("could not remove previous preview %s: %v", preview.Name, err))
+			continue
+		}
+		result.DeletedPrevious++
+	}
+	if err := s.store.ReplaceTidalPreviews(ctx, append(failedPrevious, created...)); err != nil {
+		return result, err
+	}
+	result.Playlists = created
+	return result, nil
 }
 
 func (s *Service) SpotifyPlaylists(ctx context.Context) ([]spotify.Playlist, error) {

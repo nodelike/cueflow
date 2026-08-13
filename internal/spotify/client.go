@@ -81,6 +81,33 @@ func (c *Client) TrackAudioFeatures(ctx context.Context, trackID string) (AudioF
 	return result, nil
 }
 
+// TrackISRCs resolves recording identities in batches. ISRC is the stable seam
+// used to map a Spotify-sourced Cueflow track to the same recording on TIDAL.
+func (c *Client) TrackISRCs(ctx context.Context, trackIDs []string) (map[string]string, error) {
+	result := make(map[string]string, len(trackIDs))
+	for start := 0; start < len(trackIDs); start += 50 {
+		end := min(start+50, len(trackIDs))
+		ids := make([]string, 0, end-start)
+		for _, id := range trackIDs[start:end] {
+			id = strings.TrimSpace(id)
+			if id == "" {
+				return nil, fmt.Errorf("Spotify track ID is required")
+			}
+			ids = append(ids, id)
+		}
+		var response tracksResponse
+		if err := c.get(ctx, "/tracks?ids="+url.QueryEscape(strings.Join(ids, ",")), &response); err != nil {
+			return nil, err
+		}
+		for _, track := range response.Tracks {
+			if track.ID != "" && track.ExternalIDs.ISRC != "" {
+				result[track.ID] = track.ExternalIDs.ISRC
+			}
+		}
+	}
+	return result, nil
+}
+
 func (c *Client) Connected() bool {
 	token, err := c.Store.Load()
 	return err == nil && token.RefreshToken != ""

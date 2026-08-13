@@ -28,6 +28,28 @@ type Playlist struct {
 	AccessType  string `json:"accessType"`
 }
 
+type TrackIdentity struct {
+	ID    string `json:"id"`
+	ISRC  string `json:"isrc"`
+	Title string `json:"title"`
+}
+
+type PreviewPlaylist struct {
+	PlaylistID string    `json:"playlistId"`
+	DraftID    string    `json:"draftId"`
+	SessionID  string    `json:"sessionId"`
+	Variation  int       `json:"variation"`
+	Name       string    `json:"name"`
+	CreatedAt  time.Time `json:"createdAt"`
+}
+
+type PreviewBatch struct {
+	Playlists       []PreviewPlaylist `json:"playlists"`
+	MatchedTracks   int               `json:"matchedTracks"`
+	DeletedPrevious int               `json:"deletedPrevious"`
+	Warnings        []string          `json:"warnings"`
+}
+
 type CapabilityReport struct {
 	Configured      bool     `json:"configured"`
 	Connected       bool     `json:"connected"`
@@ -42,6 +64,11 @@ type CapabilityReport struct {
 
 type resourceDocument struct {
 	Data   resource   `json:"data"`
+	Errors []apiError `json:"errors"`
+}
+
+type resourcesDocument struct {
+	Data   []resource `json:"data"`
 	Errors []apiError `json:"errors"`
 }
 
@@ -60,6 +87,8 @@ type playlistAttributes struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	AccessType  string `json:"accessType"`
+	ISRC        string `json:"isrc"`
+	Title       string `json:"title"`
 }
 
 type resourceIdentifier struct {
