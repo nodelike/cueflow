@@ -17,17 +17,16 @@ export function SetInspector({ item, nextItem, feedback, saving = false, onFeedb
     <aside className="track-inspector" aria-label="Track and transition inspector">
       <header className="inspector-title"><TrackArtwork track={item.track} linked /><div><span>Track {String(item.position).padStart(2, '0')}</span><h2>{item.track.title}</h2><p>{item.track.artist}</p></div></header>
       {nextItem && <section className="transition-check" aria-label={`Field test ${item.track.title} into ${nextItem.track.title}`}>
-        <header><span><Headphones size={13} /> Field test</span><strong>{feedback ? 'Remembered' : nextItem.transition.plan ? `${nextItem.transition.plan.bars} bars` : 'Untested'}</strong></header>
-        <div className="transition-pair">
-          <div><span>Now</span><strong>{item.track.title}</strong></div>
-          <ArrowRight size={17} aria-hidden="true" />
-          <div><span>Next</span><strong>{nextItem.track.title}</strong></div>
+        <header><span><Headphones size={13} /> Try next</span><strong>{feedback ? 'Saved' : nextItem.transition.plan ? `${nextItem.transition.plan.bars}-bar test` : 'Untested'}</strong></header>
+        <div className="transition-target">
+          <TrackArtwork track={nextItem.track} />
+          <div><span>Track {String(nextItem.position).padStart(2, '0')}</span><strong>{nextItem.track.title}</strong><small>{nextItem.track.artist} · {nextItem.track.bpm} BPM · {nextItem.track.camelot}</small></div>
         </div>
-        <div className="verdict-actions" role="group" aria-label="Did this transition work?">
-          <button type="button" className="works" disabled={saving} aria-pressed={feedback?.verdict === 'compatible'} onClick={() => onFeedback(item.track.id, nextItem.track.id, 'compatible')}><Check size={14} /> Works</button>
-          <button type="button" className="clashes" disabled={saving} aria-pressed={feedback?.verdict === 'incompatible'} onClick={() => onFeedback(item.track.id, nextItem.track.id, 'incompatible')}><X size={14} /> Doesn't</button>
+        <div className="verdict-actions" role="group" aria-label={`How did ${item.track.title} into ${nextItem.track.title} feel?`}>
+          <button type="button" className="works" disabled={saving} aria-label="Mark this transition compatible" aria-pressed={feedback?.verdict === 'compatible'} onClick={() => onFeedback(item.track.id, nextItem.track.id, 'compatible')}><Check size={14} /> Works</button>
+          <button type="button" className="clashes" disabled={saving} aria-label="Mark this transition incompatible" aria-pressed={feedback?.verdict === 'incompatible'} onClick={() => onFeedback(item.track.id, nextItem.track.id, 'incompatible')}><X size={14} /> Clashes</button>
         </div>
-        <small className="verdict-status" aria-live="polite">{saving ? 'Saving what you heard…' : feedback?.verdict === 'compatible' ? 'Marked compatible · future sets can reuse it' : feedback?.verdict === 'incompatible' ? 'Marked incompatible · future sets will steer away' : 'Try it, then tap what your ears say'}</small>
+        <small className="verdict-status" aria-live="polite">{saving ? 'Saving what you heard…' : feedback?.verdict === 'compatible' ? 'Compatible · Cueflow will favor this pairing' : feedback?.verdict === 'incompatible' ? 'Incompatible · Cueflow will avoid this pairing' : 'Mix it now, then save what you heard'}</small>
       </section>}
       <dl className="track-metadata">
         <div><dt>BPM</dt><dd>{item.track.bpm}</dd></div>

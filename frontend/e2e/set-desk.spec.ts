@@ -53,10 +53,10 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   await expect(page.getByText('Afro to pressure — A')).toBeVisible()
   await expect(page.getByRole('tab')).toHaveCount(3)
   const fieldTest = page.getByLabel(/Field test .* into .*/)
-  await fieldTest.getByRole('button', { name: 'Works' }).click()
-  await expect(fieldTest.getByText(/future sets can reuse it/i)).toBeVisible()
+  await fieldTest.getByRole('button', { name: 'Mark this transition compatible' }).click()
+  await expect(fieldTest.getByText(/Cueflow will favor this pairing/i)).toBeVisible()
   await page.reload()
-  await expect(page.getByLabel(/Field test .* into .*/).getByRole('button', { name: 'Works' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByLabel(/Field test .* into .*/).getByRole('button', { name: 'Mark this transition compatible' })).toHaveAttribute('aria-pressed', 'true')
   expect(await page.evaluate(() => ({ scrollY: window.scrollY, bodyOverflow: getComputedStyle(document.body).overflow }))).toEqual({ scrollY: 0, bodyOverflow: 'hidden' })
   const ledgerScroll = page.getByLabel('Set track list').locator('.ledger-scroll')
   const scrollContract = await ledgerScroll.evaluate((element) => {

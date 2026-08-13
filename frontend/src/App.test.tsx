@@ -64,17 +64,17 @@ describe('Cueflow set desk', () => {
     render(<App />)
     await screen.findByText('Afro to pressure — A')
     const fieldTest = screen.getByLabelText('Field test Salt Horizon into Clay Drums')
-    expect(within(fieldTest).getByText(/tap what your ears say/i)).toBeInTheDocument()
+    expect(within(fieldTest).getByText(/Mix it now/i)).toBeInTheDocument()
 
-    await userEvent.click(within(fieldTest).getByRole('button', { name: 'Works' }))
+    await userEvent.click(within(fieldTest).getByRole('button', { name: 'Mark this transition compatible' }))
     await waitFor(() => expect(saveTransitionFeedback).toHaveBeenCalledWith('one', 'two', 'compatible'))
-    expect(within(fieldTest).getByRole('button', { name: 'Works' })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(fieldTest).getByText(/future sets can reuse it/i)).toBeInTheDocument()
+    expect(within(fieldTest).getByRole('button', { name: 'Mark this transition compatible' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(fieldTest).getByText(/Cueflow will favor this pairing/i)).toBeInTheDocument()
 
-    await userEvent.click(within(fieldTest).getByRole('button', { name: "Doesn't" }))
+    await userEvent.click(within(fieldTest).getByRole('button', { name: 'Mark this transition incompatible' }))
     await waitFor(() => expect(saveTransitionFeedback).toHaveBeenLastCalledWith('one', 'two', 'incompatible'))
-    expect(within(fieldTest).getByRole('button', { name: "Doesn't" })).toHaveAttribute('aria-pressed', 'true')
-    expect(within(fieldTest).getByText(/future sets will steer away/i)).toBeInTheDocument()
+    expect(within(fieldTest).getByRole('button', { name: 'Mark this transition incompatible' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(fieldTest).getByText(/Cueflow will avoid this pairing/i)).toBeInTheDocument()
   })
 
   it('submits the tunable set brief', async () => {
