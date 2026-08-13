@@ -50,6 +50,18 @@ type PreviewBatch struct {
 	Warnings        []string          `json:"warnings"`
 }
 
+// SavedSet is a permanent TIDAL playlist created from one chosen variation.
+// Unlike previews, saved sets are never included in automatic cleanup.
+type SavedSet struct {
+	PlaylistID string    `json:"playlistId"`
+	DraftID    string    `json:"draftId"`
+	SessionID  string    `json:"sessionId"`
+	Variation  int       `json:"variation"`
+	Name       string    `json:"name"`
+	TrackCount int       `json:"trackCount"`
+	CreatedAt  time.Time `json:"createdAt"`
+}
+
 type CapabilityReport struct {
 	Configured      bool     `json:"configured"`
 	Connected       bool     `json:"connected"`

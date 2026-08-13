@@ -18,6 +18,7 @@ import (
 
 const (
 	previewPrefix = "Cueflow Preview — "
+	setPrefix     = "Cueflow Set — "
 	probePrefix   = "Cueflow Capability Check — "
 )
 
@@ -47,8 +48,8 @@ func (c *Client) Status() Status {
 func (c *Client) Connected() bool { return c.Status().Connected }
 
 func (c *Client) CreatePlaylist(ctx context.Context, name, description string) (Playlist, error) {
-	if !safePlaylistName(name) {
-		return Playlist{}, fmt.Errorf("Cueflow may only create preview or capability-check playlists")
+	if !mutablePlaylistName(name) {
+		return Playlist{}, fmt.Errorf("Cueflow may only create preview, saved-set, or capability-check playlists")
 	}
 	body := map[string]any{"data": map[string]any{
 		"type":       "playlists",
@@ -64,6 +65,27 @@ func (c *Client) CreatePlaylist(ctx context.Context, name, description string) (
 	return document.Data.playlist(), nil
 }
 
+// CreateSavedSet completes the create-and-fill operation before exposing a
+// permanent playlist to callers. If filling fails, the uncommitted playlist is
+// removed even though committed saved sets have no public deletion path.
+func (c *Client) CreateSavedSet(ctx context.Context, name, description string, trackIDs []string) (Playlist, error) {
+	if !strings.HasPrefix(name, setPrefix) {
+		return Playlist{}, fmt.Errorf("permanent TIDAL set names must start with %q", setPrefix)
+	}
+	playlist, err := c.CreatePlaylist(ctx, name, description)
+	if err != nil {
+		return Playlist{}, err
+	}
+	if err := c.AddPlaylistItems(ctx, playlist.ID, trackIDs, ""); err != nil {
+		cleanupErr := c.deletePlaylistWithPrefix(context.Background(), playlist.ID, setPrefix)
+		if cleanupErr != nil {
+			return Playlist{}, errors.Join(err, fmt.Errorf("clean up incomplete permanent playlist %s: %w", playlist.ID, cleanupErr))
+		}
+		return Playlist{}, err
+	}
+	return playlist, nil
+}
+
 func (c *Client) Playlist(ctx context.Context, playlistID string) (Playlist, error) {
 	var document resourceDocument
 	if err := c.sendJSON(ctx, http.MethodGet, "/playlists/"+url.PathEscape(playlistID), nil, &document, false); err != nil {
@@ -77,7 +99,7 @@ func (c *Client) AddPlaylistItems(ctx context.Context, playlistID string, trackI
 	if err != nil {
 		return err
 	}
-	if !safePlaylistName(playlist.Name) {
+	if !mutablePlaylistName(playlist.Name) {
 		return fmt.Errorf("refusing to modify non-Cueflow TIDAL playlist %q", playlist.Name)
 	}
 	if len(trackIDs) == 0 {
@@ -146,11 +168,22 @@ func (c *Client) TrackIDsByISRC(ctx context.Context, isrcs []string) (map[string
 }
 
 func (c *Client) DeletePlaylist(ctx context.Context, playlistID string) error {
+	return c.deletePlaylistWithPrefix(ctx, playlistID, previewPrefix, probePrefix)
+}
+
+func (c *Client) deletePlaylistWithPrefix(ctx context.Context, playlistID string, prefixes ...string) error {
 	playlist, err := c.Playlist(ctx, playlistID)
 	if err != nil {
 		return err
 	}
-	if !safePlaylistName(playlist.Name) {
+	allowed := false
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(playlist.Name, prefix) {
+			allowed = true
+			break
+		}
+	}
+	if !allowed {
 		return fmt.Errorf("refusing to delete non-Cueflow TIDAL playlist %q", playlist.Name)
 	}
 	return c.sendJSON(ctx, http.MethodDelete, "/playlists/"+url.PathEscape(playlistID), nil, nil, true)
@@ -329,8 +362,8 @@ func (c *Client) client() *http.Client {
 	return &http.Client{Timeout: 20 * time.Second}
 }
 
-func safePlaylistName(name string) bool {
-	return strings.HasPrefix(name, previewPrefix) || strings.HasPrefix(name, probePrefix)
+func mutablePlaylistName(name string) bool {
+	return strings.HasPrefix(name, previewPrefix) || strings.HasPrefix(name, setPrefix) || strings.HasPrefix(name, probePrefix)
 }
 
 func idempotencyKey() (string, error) {

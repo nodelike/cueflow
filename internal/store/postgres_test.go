@@ -11,6 +11,7 @@ import (
 
 	"cueflow/internal/domain"
 	"cueflow/internal/fixtures"
+	"cueflow/internal/tidal"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -102,6 +103,21 @@ func TestPostgresRoundTripAndLatestSession(t *testing.T) {
 		t.Fatalf("preview-only temporal analysis was accepted: %v", err)
 	}
 	now := time.Now().UTC()
+	savedSet := tidal.SavedSet{PlaylistID: "tidal-set-1", DraftID: "draft-tidal-1", SessionID: "session-tidal", Variation: 2, Name: "Cueflow Set — Test B", TrackCount: 18, CreatedAt: now}
+	if err := repository.SaveTidalSet(ctx, savedSet); err != nil {
+		t.Fatal(err)
+	}
+	if err := repository.SaveTidalSet(ctx, savedSet); err != nil {
+		t.Fatalf("idempotent saved-set registration failed: %v", err)
+	}
+	storedSet, found, err := repository.TidalSavedSetForDraft(ctx, savedSet.DraftID)
+	if err != nil || !found || storedSet.PlaylistID != savedSet.PlaylistID {
+		t.Fatalf("saved TIDAL set lookup: %#v found=%v err=%v", storedSet, found, err)
+	}
+	savedSets, err := repository.TidalSavedSets(ctx)
+	if err != nil || len(savedSets) != 1 || savedSets[0].TrackCount != 18 {
+		t.Fatalf("saved TIDAL set list: %#v err=%v", savedSets, err)
+	}
 	const playlistID = "crate-afro"
 	if _, err := repository.pool.Exec(ctx, `INSERT INTO spotify_playlists(id,name,kind,writable,image_url,track_count,synced_at) VALUES($1,'Afro crate','source',FALSE,'https://image.test/crate',1,NOW())`, playlistID); err != nil {
 		t.Fatal(err)

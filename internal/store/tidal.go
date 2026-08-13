@@ -51,3 +51,51 @@ VALUES ($1,$2,$3,$4,$5,$6)`, preview.PlaylistID, preview.DraftID, preview.Sessio
 	}
 	return nil
 }
+
+func (p *Postgres) TidalSavedSets(ctx context.Context) ([]tidal.SavedSet, error) {
+	rows, err := p.pool.Query(ctx, `
+SELECT playlist_id, draft_id, session_id, variation, name, track_count, created_at
+FROM tidal_saved_sets
+ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("list saved TIDAL sets: %w", err)
+	}
+	defer rows.Close()
+	sets := []tidal.SavedSet{}
+	for rows.Next() {
+		var set tidal.SavedSet
+		if err := rows.Scan(&set.PlaylistID, &set.DraftID, &set.SessionID, &set.Variation, &set.Name, &set.TrackCount, &set.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scan saved TIDAL set: %w", err)
+		}
+		sets = append(sets, set)
+	}
+	return sets, rows.Err()
+}
+
+func (p *Postgres) TidalSavedSetForDraft(ctx context.Context, draftID string) (tidal.SavedSet, bool, error) {
+	var set tidal.SavedSet
+	err := p.pool.QueryRow(ctx, `
+SELECT playlist_id, draft_id, session_id, variation, name, track_count, created_at
+FROM tidal_saved_sets
+WHERE draft_id=$1`, draftID).Scan(
+		&set.PlaylistID, &set.DraftID, &set.SessionID, &set.Variation, &set.Name, &set.TrackCount, &set.CreatedAt,
+	)
+	if err == pgx.ErrNoRows {
+		return tidal.SavedSet{}, false, nil
+	}
+	if err != nil {
+		return tidal.SavedSet{}, false, fmt.Errorf("get saved TIDAL set for draft: %w", err)
+	}
+	return set, true, nil
+}
+
+func (p *Postgres) SaveTidalSet(ctx context.Context, set tidal.SavedSet) error {
+	_, err := p.pool.Exec(ctx, `
+INSERT INTO tidal_saved_sets (playlist_id, draft_id, session_id, variation, name, track_count, created_at)
+VALUES ($1,$2,$3,$4,$5,$6,$7)
+ON CONFLICT (draft_id) DO NOTHING`, set.PlaylistID, set.DraftID, set.SessionID, set.Variation, set.Name, set.TrackCount, set.CreatedAt)
+	if err != nil {
+		return fmt.Errorf("save permanent TIDAL set: %w", err)
+	}
+	return nil
+}

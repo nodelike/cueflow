@@ -142,6 +142,66 @@ func TestClientRefusesToModifyOrDeletePermanentPlaylist(t *testing.T) {
 	}
 }
 
+func TestCreateSavedSetFillsPlaylistButPublicDeleteRefusesIt(t *testing.T) {
+	deleted := false
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.Method + " " + request.URL.Path {
+		case "POST /playlists":
+			writer.Write([]byte(`{"data":{"type":"playlists","id":"saved","attributes":{"name":"Cueflow Set — Night A"}}}`))
+		case "GET /playlists/saved":
+			writer.Write([]byte(`{"data":{"type":"playlists","id":"saved","attributes":{"name":"Cueflow Set — Night A"}}}`))
+		case "POST /playlists/saved/relationships/items":
+			writer.Write([]byte(`{"data":[]}`))
+		case "DELETE /playlists/saved":
+			deleted = true
+			writer.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+	store := &memoryStore{token: Token{AccessToken: "access", RefreshToken: "refresh", ExpiresAt: time.Now().Add(time.Hour)}}
+	client := &Client{ClientID: "client", Store: store, APIBase: server.URL, HTTPClient: server.Client()}
+	playlist, err := client.CreateSavedSet(context.Background(), "Cueflow Set — Night A", "permanent", []string{"track"})
+	if err != nil || playlist.ID != "saved" {
+		t.Fatalf("create saved set: %#v err=%v", playlist, err)
+	}
+	if err := client.DeletePlaylist(context.Background(), playlist.ID); err == nil {
+		t.Fatal("public deletion accepted a permanent set")
+	}
+	if deleted {
+		t.Fatal("permanent set reached the TIDAL delete endpoint")
+	}
+}
+
+func TestCreateSavedSetCleansUpIncompletePlaylist(t *testing.T) {
+	deleted := false
+	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		switch request.Method + " " + request.URL.Path {
+		case "POST /playlists":
+			writer.Write([]byte(`{"data":{"type":"playlists","id":"incomplete","attributes":{"name":"Cueflow Set — Broken"}}}`))
+		case "GET /playlists/incomplete":
+			writer.Write([]byte(`{"data":{"type":"playlists","id":"incomplete","attributes":{"name":"Cueflow Set — Broken"}}}`))
+		case "POST /playlists/incomplete/relationships/items":
+			http.Error(writer, "failed", http.StatusBadGateway)
+		case "DELETE /playlists/incomplete":
+			deleted = true
+			writer.WriteHeader(http.StatusNoContent)
+		default:
+			http.NotFound(writer, request)
+		}
+	}))
+	defer server.Close()
+	store := &memoryStore{token: Token{AccessToken: "access", RefreshToken: "refresh", ExpiresAt: time.Now().Add(time.Hour)}}
+	client := &Client{ClientID: "client", Store: store, APIBase: server.URL, HTTPClient: server.Client()}
+	if _, err := client.CreateSavedSet(context.Background(), "Cueflow Set — Broken", "permanent", []string{"track"}); err == nil {
+		t.Fatal("failed item fill was accepted")
+	}
+	if !deleted {
+		t.Fatal("incomplete permanent playlist was not cleaned up")
+	}
+}
+
 func TestStatusHandlesMissingToken(t *testing.T) {
 	client := &Client{ClientID: "client", Store: &memoryStore{err: errors.New("missing")}}
 	status := client.Status()

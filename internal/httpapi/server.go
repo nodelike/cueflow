@@ -34,6 +34,8 @@ func New(svc *service.Service, logger *slog.Logger) http.Handler {
 	router.Get("/api/tidal/status", server.tidalStatus)
 	router.Post("/api/tidal/capabilities/probe", server.probeTidalCapabilities)
 	router.Post("/api/tidal/previews", server.publishTidalPreviews)
+	router.Get("/api/tidal/sets", server.tidalSavedSets)
+	router.Post("/api/tidal/sets/{id}", server.saveTidalSet)
 	router.Post("/api/sets/{id}/publish", server.publish)
 	router.Put("/api/transitions/{from}/to/{to}/feedback", server.saveTransitionFeedback)
 	router.Get("/api/research/queue", server.researchQueue)
@@ -166,6 +168,24 @@ func (s *Server) publishTidalPreviews(writer http.ResponseWriter, request *http.
 		return
 	}
 	writeJSON(writer, http.StatusCreated, result)
+}
+
+func (s *Server) tidalSavedSets(writer http.ResponseWriter, request *http.Request) {
+	sets, err := s.service.TidalSavedSets(request.Context())
+	if err != nil {
+		writeError(writer, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(writer, http.StatusOK, sets)
+}
+
+func (s *Server) saveTidalSet(writer http.ResponseWriter, request *http.Request) {
+	set, err := s.service.SaveTidalSet(request.Context(), chi.URLParam(request, "id"))
+	if err != nil {
+		writeError(writer, http.StatusUnprocessableEntity, err)
+		return
+	}
+	writeJSON(writer, http.StatusCreated, set)
 }
 
 func (s *Server) publish(writer http.ResponseWriter, request *http.Request) {

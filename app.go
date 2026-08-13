@@ -149,6 +149,20 @@ func (a *App) PublishTidalPreviews(draftIDs []string) (tidal.PreviewBatch, error
 	return a.service.PublishTidalPreviews(a.ctx, draftIDs)
 }
 
+func (a *App) TidalSavedSets() ([]tidal.SavedSet, error) {
+	if a.service == nil {
+		return nil, fmt.Errorf("Cueflow is not ready")
+	}
+	return a.service.TidalSavedSets(a.ctx)
+}
+
+func (a *App) SaveTidalSet(draftID string) (tidal.SavedSet, error) {
+	if a.service == nil {
+		return tidal.SavedSet{}, fmt.Errorf("Cueflow is not ready")
+	}
+	return a.service.SaveTidalSet(a.ctx, draftID)
+}
+
 func (a *App) PublishSet(draftID string) (spotify.Playlist, error) {
 	if a.service == nil {
 		return spotify.Playlist{}, fmt.Errorf("Cueflow is not ready")
