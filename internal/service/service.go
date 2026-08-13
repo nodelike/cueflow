@@ -110,6 +110,10 @@ func (s *Service) Bootstrap(ctx context.Context) domain.Bootstrap {
 	if err != nil {
 		return domain.Bootstrap{Error: err.Error()}
 	}
+	transitionFeedback, err := s.store.ListTransitionFeedback(ctx)
+	if err != nil {
+		return domain.Bootstrap{Error: err.Error()}
+	}
 	catalog := make(map[string]domain.Track, len(tracks))
 	for _, track := range tracks {
 		catalog[track.ID] = track
@@ -127,11 +131,12 @@ func (s *Service) Bootstrap(ctx context.Context) domain.Bootstrap {
 		return domain.Bootstrap{Error: err.Error()}
 	}
 	return domain.Bootstrap{
-		DatabaseReady: true,
-		TrackCount:    len(tracks),
-		DraftCount:    draftCount,
-		Tracks:        tracks,
-		Drafts:        drafts,
+		DatabaseReady:      true,
+		TrackCount:         len(tracks),
+		DraftCount:         draftCount,
+		Tracks:             tracks,
+		Drafts:             drafts,
+		TransitionFeedback: transitionFeedback,
 	}
 }
 
@@ -162,7 +167,11 @@ func (s *Service) Generate(ctx context.Context, request domain.GenerateRequest) 
 	if err != nil {
 		return nil, err
 	}
-	drafts, err := s.generator.GenerateWithAnalyses(tracks, analyses, request)
+	transitionFeedback, err := s.store.ListTransitionFeedback(ctx)
+	if err != nil {
+		return nil, err
+	}
+	drafts, err := s.generator.GenerateWithAnalysesAndFeedback(tracks, analyses, transitionFeedback, request)
 	if err != nil {
 		return nil, err
 	}
@@ -170,6 +179,10 @@ func (s *Service) Generate(ctx context.Context, request domain.GenerateRequest) 
 		return nil, fmt.Errorf("save generated drafts: %w", err)
 	}
 	return drafts, nil
+}
+
+func (s *Service) SaveTransitionFeedback(ctx context.Context, feedback domain.TransitionFeedback) (domain.TransitionFeedback, error) {
+	return s.store.SaveTransitionFeedback(ctx, feedback)
 }
 
 func (s *Service) EnrichTrack(ctx context.Context, input domain.TrackEnrichment) error {

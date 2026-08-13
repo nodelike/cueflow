@@ -229,6 +229,47 @@ func (p *Postgres) GetDraft(ctx context.Context, id string) (domain.SetDraft, er
 	return draft, nil
 }
 
+func (p *Postgres) SaveTransitionFeedback(ctx context.Context, feedback domain.TransitionFeedback) (domain.TransitionFeedback, error) {
+	if err := feedback.Validate(); err != nil {
+		return domain.TransitionFeedback{}, err
+	}
+	if feedback.RecordedAt.IsZero() {
+		feedback.RecordedAt = NowUTC()
+	}
+	err := p.pool.QueryRow(ctx, `
+INSERT INTO transition_feedback (from_track_id, to_track_id, verdict, recorded_at)
+VALUES ($1,$2,$3,$4)
+ON CONFLICT (from_track_id, to_track_id) DO UPDATE SET
+  verdict=EXCLUDED.verdict, recorded_at=EXCLUDED.recorded_at
+RETURNING from_track_id, to_track_id, verdict, recorded_at`,
+		feedback.FromTrackID, feedback.ToTrackID, feedback.Verdict, feedback.RecordedAt,
+	).Scan(&feedback.FromTrackID, &feedback.ToTrackID, &feedback.Verdict, &feedback.RecordedAt)
+	if err != nil {
+		return domain.TransitionFeedback{}, fmt.Errorf("save transition feedback: %w", err)
+	}
+	return feedback, nil
+}
+
+func (p *Postgres) ListTransitionFeedback(ctx context.Context) ([]domain.TransitionFeedback, error) {
+	rows, err := p.pool.Query(ctx, `
+SELECT from_track_id, to_track_id, verdict, recorded_at
+FROM transition_feedback
+ORDER BY recorded_at DESC, from_track_id, to_track_id`)
+	if err != nil {
+		return nil, fmt.Errorf("list transition feedback: %w", err)
+	}
+	defer rows.Close()
+	feedback := []domain.TransitionFeedback{}
+	for rows.Next() {
+		var item domain.TransitionFeedback
+		if err := rows.Scan(&item.FromTrackID, &item.ToTrackID, &item.Verdict, &item.RecordedAt); err != nil {
+			return nil, fmt.Errorf("scan transition feedback: %w", err)
+		}
+		feedback = append(feedback, item)
+	}
+	return feedback, rows.Err()
+}
+
 func (p *Postgres) DeleteDemoData(ctx context.Context) error {
 	_, err := p.pool.Exec(ctx, `
 DELETE FROM set_drafts;

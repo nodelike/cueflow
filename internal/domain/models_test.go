@@ -11,3 +11,19 @@ func TestGenerateRequestDefaultsPreserveExplicitZeroControls(t *testing.T) {
 		t.Fatalf("unrelated defaults were not applied: %#v", request)
 	}
 }
+
+func TestTransitionFeedbackValidation(t *testing.T) {
+	valid := TransitionFeedback{FromTrackID: "one", ToTrackID: "two", Verdict: TransitionVerdictCompatible}
+	if err := valid.Validate(); err != nil {
+		t.Fatalf("valid feedback was rejected: %v", err)
+	}
+	for _, invalid := range []TransitionFeedback{
+		{ToTrackID: "two", Verdict: TransitionVerdictCompatible},
+		{FromTrackID: "one", ToTrackID: "one", Verdict: TransitionVerdictCompatible},
+		{FromTrackID: "one", ToTrackID: "two", Verdict: "maybe"},
+	} {
+		if err := invalid.Validate(); err == nil {
+			t.Fatalf("invalid feedback was accepted: %#v", invalid)
+		}
+	}
+}

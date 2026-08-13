@@ -141,6 +141,29 @@ func TestTransitionsExplainRisk(t *testing.T) {
 	}
 }
 
+func TestFieldFeedbackOverridesTheHeuristicForAnExactTrackOrder(t *testing.T) {
+	transition := domain.Transition{
+		FromTrackID: "one", ToTrackID: "two", Score: .74, Risk: "medium", Summary: "heuristic estimate",
+		Components: []domain.ScoreComponent{{Name: "tempo", Score: .8}},
+	}
+	compatible := applyTransitionFeedback(transition, domain.TransitionFeedback{
+		FromTrackID: "one", ToTrackID: "two", Verdict: domain.TransitionVerdictCompatible,
+	})
+	if compatible.Score != .9 || compatible.Risk != "low" || !strings.Contains(compatible.Summary, "field test") {
+		t.Fatalf("compatible field test was not applied: %#v", compatible)
+	}
+	if last := compatible.Components[len(compatible.Components)-1]; last.Name != "field test" || last.Score != 1 {
+		t.Fatalf("compatible transition lacks field evidence: %#v", compatible.Components)
+	}
+
+	incompatible := applyTransitionFeedback(transition, domain.TransitionFeedback{
+		FromTrackID: "one", ToTrackID: "two", Verdict: domain.TransitionVerdictIncompatible,
+	})
+	if incompatible.Score != .1 || incompatible.Risk != "high" || !strings.Contains(incompatible.Summary, "clashes") {
+		t.Fatalf("incompatible field test was not applied: %#v", incompatible)
+	}
+}
+
 func TestTempoCompatibilityUsesRelativeAndOctaveEquivalentTempo(t *testing.T) {
 	score, adjustment, octaveEquivalent := tempoCompatibility(75, 150)
 	if score != 1 || adjustment != 0 || !octaveEquivalent {

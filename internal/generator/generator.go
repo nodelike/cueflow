@@ -16,12 +16,13 @@ import (
 )
 
 const (
-	beamWidth          = 42
-	branchWidth        = 14
-	durationLowerBound = .90
-	durationUpperBound = 1.10
-	scoreVersion       = "heuristic-fit-v2"
-	transitionBasis    = "metadata-only"
+	beamWidth            = 42
+	branchWidth          = 14
+	durationLowerBound   = .90
+	durationUpperBound   = 1.10
+	scoreVersion         = "heuristic-fit-v2"
+	transitionBasis      = "metadata-only"
+	fieldFeedbackVersion = "field-feedback-v1"
 )
 
 type Generator struct{}
@@ -47,6 +48,10 @@ func (g *Generator) Generate(catalog []domain.Track, input domain.GenerateReques
 }
 
 func (g *Generator) GenerateWithAnalyses(catalog []domain.Track, analyses map[string]domain.TrackAnalysis, input domain.GenerateRequest) ([]domain.SetDraft, error) {
+	return g.GenerateWithAnalysesAndFeedback(catalog, analyses, nil, input)
+}
+
+func (g *Generator) GenerateWithAnalysesAndFeedback(catalog []domain.Track, analyses map[string]domain.TrackAnalysis, feedback []domain.TransitionFeedback, input domain.GenerateRequest) ([]domain.SetDraft, error) {
 	req := input.WithDefaults()
 	if len(catalog) < 3 {
 		return nil, fmt.Errorf("at least three tracks are required")
@@ -93,10 +98,17 @@ func (g *Generator) GenerateWithAnalyses(catalog []domain.Track, analyses map[st
 	usedEdges := map[string]int{}
 	usedTracks := map[string]int{}
 	transitionCache := map[string]domain.Transition{}
+	feedbackByEdge := make(map[string]domain.TransitionFeedback, len(feedback))
+	for _, item := range feedback {
+		if err := item.Validate(); err != nil {
+			return nil, fmt.Errorf("transition feedback: %w", err)
+		}
+		feedbackByEdge[edgeKey(item.FromTrackID, item.ToTrackID)] = item
+	}
 	sessionID := uuid.NewString()
 	drafts := make([]domain.SetDraft, 0, req.VariationCount)
 	for variation := 1; variation <= req.VariationCount; variation++ {
-		draft, err := g.generateOne(pool, analyses, req, required, usedEdges, usedTracks, transitionCache, seed+int64(variation*7919), variation, sessionID)
+		draft, err := g.generateOne(pool, analyses, feedbackByEdge, req, required, usedEdges, usedTracks, transitionCache, seed+int64(variation*7919), variation, sessionID)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +123,7 @@ func (g *Generator) GenerateWithAnalyses(catalog []domain.Track, analyses map[st
 	return drafts, nil
 }
 
-func (g *Generator) generateOne(pool []domain.Track, analyses map[string]domain.TrackAnalysis, req domain.GenerateRequest, required map[string]bool, usedEdges, usedTracks map[string]int, transitionCache map[string]domain.Transition, seed int64, variation int, sessionID string) (domain.SetDraft, error) {
+func (g *Generator) generateOne(pool []domain.Track, analyses map[string]domain.TrackAnalysis, feedback map[string]domain.TransitionFeedback, req domain.GenerateRequest, required map[string]bool, usedEdges, usedTracks map[string]int, transitionCache map[string]domain.Transition, seed int64, variation int, sessionID string) (domain.SetDraft, error) {
 	avgDuration := 0
 	for _, track := range pool {
 		avgDuration += track.DurationSeconds
@@ -135,7 +147,7 @@ func (g *Generator) generateOne(pool []domain.Track, analyses map[string]domain.
 				continue
 			}
 			progress := clamp01(float64(state.duration) / float64(targetSeconds))
-			candidates := g.rankCandidates(state, pool, analyses, req, required, usedEdges, usedTracks, transitionCache, progress, rng)
+			candidates := g.rankCandidates(state, pool, analyses, feedback, req, required, usedEdges, usedTracks, transitionCache, progress, rng)
 			for _, item := range candidates[:min(branchWidth, len(candidates))] {
 				used := cloneSet(state.used)
 				used[item.track.ID] = true
@@ -202,7 +214,7 @@ func openerStates(pool []domain.Track, req domain.GenerateRequest, usedTracks ma
 	return states
 }
 
-func (g *Generator) rankCandidates(state beamState, pool []domain.Track, analyses map[string]domain.TrackAnalysis, req domain.GenerateRequest, required map[string]bool, usedEdges, usedTracks map[string]int, transitionCache map[string]domain.Transition, progress float64, rng *rand.Rand) []candidate {
+func (g *Generator) rankCandidates(state beamState, pool []domain.Track, analyses map[string]domain.TrackAnalysis, feedback map[string]domain.TransitionFeedback, req domain.GenerateRequest, required map[string]bool, usedEdges, usedTracks map[string]int, transitionCache map[string]domain.Transition, progress float64, rng *rand.Rand) []candidate {
 	from := state.tracks[len(state.tracks)-1]
 	target := targetEnergy(req.Arc, progress)
 	targetBPM := interpolatedBPM(req, progress)
@@ -215,6 +227,9 @@ func (g *Generator) rankCandidates(state beamState, pool []domain.Track, analyse
 		transition, cached := transitionCache[key]
 		if !cached {
 			transition = scoreTransitionWithAnalyses(from, track, analyses, req.HarmonicStrictness)
+			if fieldTest, ok := feedback[key]; ok {
+				transition = applyTransitionFeedback(transition, fieldTest)
+			}
 			transitionCache[key] = transition
 		}
 		energyFit := clamp01(1 - math.Abs(track.Energy-target)*1.45)
@@ -244,6 +259,28 @@ func (g *Generator) rankCandidates(state beamState, pool []domain.Track, analyse
 	}
 	sort.Slice(items, func(i, j int) bool { return items[i].score > items[j].score })
 	return items
+}
+
+func applyTransitionFeedback(transition domain.Transition, feedback domain.TransitionFeedback) domain.Transition {
+	component := domain.ScoreComponent{Name: "field test", Note: "You tried this exact track order"}
+	switch feedback.Verdict {
+	case domain.TransitionVerdictCompatible:
+		component.Score = 1
+		component.Note += " and marked it compatible"
+		transition.Score = math.Max(transition.Score, .9)
+		transition.Risk = "low"
+		transition.Summary += "; your field test says this pairing works"
+	case domain.TransitionVerdictIncompatible:
+		component.Score = 0
+		component.Note += " and marked it incompatible"
+		transition.Score = math.Min(transition.Score, .1)
+		transition.Risk = "high"
+		transition.Summary += "; your field test says this pairing clashes"
+	default:
+		return transition
+	}
+	transition.Components = append(transition.Components, component)
+	return transition
 }
 
 func scoreTransition(from, to domain.Track, strictness float64) domain.Transition {
@@ -405,6 +442,17 @@ func buildDraft(state beamState, req domain.GenerateRequest, variation int, sess
 	version := scoreVersion
 	if temporalCoverage > 0 {
 		version += "+" + domain.TransitionPlanVersion
+	}
+	for _, transition := range state.transitions {
+		for _, component := range transition.Components {
+			if component.Name == "field test" {
+				version += "+" + fieldFeedbackVersion
+				break
+			}
+		}
+		if strings.Contains(version, fieldFeedbackVersion) {
+			break
+		}
 	}
 	quality := 100 * (energyFit*.20 + tempo*.15 + harmony*.12 + diversity*.08 + durationFit*.15 + endingScore(state.tracks)*.08 + transitionSafety*.17 + analysisConfidence*.05)
 	if highRiskTransitions > 0 {

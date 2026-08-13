@@ -140,3 +140,10 @@ func (a *App) TrackWaveform(trackID string) (domain.TrackWaveform, error) {
 	}
 	return a.service.TrackWaveform(a.ctx, trackID)
 }
+
+func (a *App) SaveTransitionFeedback(feedback domain.TransitionFeedback) (domain.TransitionFeedback, error) {
+	if a.service == nil {
+		return domain.TransitionFeedback{}, fmt.Errorf("Cueflow is not ready")
+	}
+	return a.service.SaveTransitionFeedback(a.ctx, feedback)
+}

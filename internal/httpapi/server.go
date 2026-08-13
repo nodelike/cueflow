@@ -32,10 +32,33 @@ func New(svc *service.Service, logger *slog.Logger) http.Handler {
 	router.Get("/api/spotify/playlists", server.spotifyPlaylists)
 	router.Post("/api/spotify/playlists/sync", server.syncSpotifyPlaylists)
 	router.Post("/api/sets/{id}/publish", server.publish)
+	router.Put("/api/transitions/{from}/to/{to}/feedback", server.saveTransitionFeedback)
 	router.Get("/api/research/queue", server.researchQueue)
 	router.Get("/api/tracks/{id}/waveform", server.trackWaveform)
 	router.Put("/api/tracks/{id}/enrichment", server.enrichTrack)
 	return router
+}
+
+func (s *Server) saveTransitionFeedback(writer http.ResponseWriter, request *http.Request) {
+	var input struct {
+		Verdict string `json:"verdict"`
+	}
+	decoder := json.NewDecoder(http.MaxBytesReader(writer, request.Body, 1<<20))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		writeError(writer, http.StatusBadRequest, err)
+		return
+	}
+	feedback, err := s.service.SaveTransitionFeedback(request.Context(), domain.TransitionFeedback{
+		FromTrackID: chi.URLParam(request, "from"),
+		ToTrackID:   chi.URLParam(request, "to"),
+		Verdict:     input.Verdict,
+	})
+	if err != nil {
+		writeError(writer, http.StatusUnprocessableEntity, err)
+		return
+	}
+	writeJSON(writer, http.StatusOK, feedback)
 }
 
 func (s *Server) spotifyPlaylists(writer http.ResponseWriter, request *http.Request) {

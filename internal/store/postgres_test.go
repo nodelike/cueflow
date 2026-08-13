@@ -52,6 +52,22 @@ func TestPostgresRoundTripAndLatestSession(t *testing.T) {
 	if err := repository.UpsertTracks(ctx, tracks); err != nil {
 		t.Fatal(err)
 	}
+	feedback, err := repository.SaveTransitionFeedback(ctx, domain.TransitionFeedback{
+		FromTrackID: tracks[0].ID, ToTrackID: tracks[1].ID, Verdict: domain.TransitionVerdictCompatible,
+	})
+	if err != nil || feedback.RecordedAt.IsZero() {
+		t.Fatalf("save transition feedback: %#v err=%v", feedback, err)
+	}
+	feedback, err = repository.SaveTransitionFeedback(ctx, domain.TransitionFeedback{
+		FromTrackID: tracks[0].ID, ToTrackID: tracks[1].ID, Verdict: domain.TransitionVerdictIncompatible,
+	})
+	if err != nil || feedback.Verdict != domain.TransitionVerdictIncompatible {
+		t.Fatalf("update transition feedback: %#v err=%v", feedback, err)
+	}
+	feedbackItems, err := repository.ListTransitionFeedback(ctx)
+	if err != nil || len(feedbackItems) != 1 || feedbackItems[0].Verdict != domain.TransitionVerdictIncompatible {
+		t.Fatalf("transition feedback round trip: %#v err=%v", feedbackItems, err)
+	}
 	listed, err := repository.ListTracks(ctx)
 	if err != nil || len(listed) != 4 {
 		t.Fatalf("track round trip: %d %v", len(listed), err)

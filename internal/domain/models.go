@@ -1,6 +1,15 @@
 package domain
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
+
+const (
+	TransitionVerdictCompatible   = "compatible"
+	TransitionVerdictIncompatible = "incompatible"
+)
 
 type Track struct {
 	ID                 string    `json:"id"`
@@ -103,6 +112,28 @@ type Transition struct {
 	Plan                  *TransitionPlan  `json:"plan,omitempty"`
 }
 
+type TransitionFeedback struct {
+	FromTrackID string    `json:"fromTrackId"`
+	ToTrackID   string    `json:"toTrackId"`
+	Verdict     string    `json:"verdict"`
+	RecordedAt  time.Time `json:"recordedAt"`
+}
+
+func (feedback TransitionFeedback) Validate() error {
+	feedback.FromTrackID = strings.TrimSpace(feedback.FromTrackID)
+	feedback.ToTrackID = strings.TrimSpace(feedback.ToTrackID)
+	if feedback.FromTrackID == "" || feedback.ToTrackID == "" {
+		return fmt.Errorf("both transition track IDs are required")
+	}
+	if feedback.FromTrackID == feedback.ToTrackID {
+		return fmt.Errorf("a transition needs two different tracks")
+	}
+	if feedback.Verdict != TransitionVerdictCompatible && feedback.Verdict != TransitionVerdictIncompatible {
+		return fmt.Errorf("transition verdict must be %q or %q", TransitionVerdictCompatible, TransitionVerdictIncompatible)
+	}
+	return nil
+}
+
 type SetTrack struct {
 	Position     int        `json:"position"`
 	Track        Track      `json:"track"`
@@ -135,10 +166,11 @@ type SetDraft struct {
 }
 
 type Bootstrap struct {
-	DatabaseReady bool       `json:"databaseReady"`
-	TrackCount    int        `json:"trackCount"`
-	DraftCount    int        `json:"draftCount"`
-	Tracks        []Track    `json:"tracks"`
-	Drafts        []SetDraft `json:"drafts"`
-	Error         string     `json:"error,omitempty"`
+	DatabaseReady      bool                 `json:"databaseReady"`
+	TrackCount         int                  `json:"trackCount"`
+	DraftCount         int                  `json:"draftCount"`
+	Tracks             []Track              `json:"tracks"`
+	Drafts             []SetDraft           `json:"drafts"`
+	TransitionFeedback []TransitionFeedback `json:"transitionFeedback"`
+	Error              string               `json:"error,omitempty"`
 }
