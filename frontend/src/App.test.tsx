@@ -71,6 +71,8 @@ describe('Cueflow set desk', () => {
     expect(within(fieldTest).getByRole('button', { name: 'Mark this transition compatible' })).toHaveAttribute('aria-pressed', 'true')
     expect(within(fieldTest).getByText('Verified works')).toBeInTheDocument()
     expect(within(fieldTest).getByText(/Cueflow will favor this pairing/i)).toBeInTheDocument()
+    expect(document.querySelector('.track-ledger .ledger-transition-cue.verdict-compatible')).toBeInTheDocument()
+    expect(fieldTest.querySelector('.transition-direction, .transition-sparkle')).not.toBeInTheDocument()
 
     await userEvent.click(within(fieldTest).getByRole('button', { name: 'Mark this transition incompatible' }))
     await waitFor(() => expect(saveTransitionFeedback).toHaveBeenLastCalledWith('one', 'two', 'incompatible'))

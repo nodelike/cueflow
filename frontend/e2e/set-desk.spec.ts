@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
+const apiURL = process.env.CUEFLOW_E2E_API_URL ?? 'http://127.0.0.1:8787'
+
 async function mockDesktopWaveform(page: Page) {
   await page.evaluate(() => {
     if (!window.go?.main?.App) return
@@ -23,7 +25,7 @@ test('switches to dark mode, uses the acid accent, and remembers the choice', as
 })
 
 test('generates, compares, and inspects persisted set variations', async ({ page, request }) => {
-  await request.post('http://127.0.0.1:8787/api/seed')
+  await request.post(`${apiURL}/api/seed`)
   await page.route(/\/api\/tracks\/[^/]+\/waveform(?:\?.*)?$/, async (route) => {
     const trackId = decodeURIComponent(new URL(route.request().url()).pathname.split('/').at(-2) ?? '')
     await route.fulfill({
@@ -55,6 +57,8 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   const fieldTest = page.getByLabel(/Field test .* into .*/)
   await fieldTest.getByRole('button', { name: 'Mark this transition compatible' }).click()
   await expect(fieldTest.getByText('Verified works')).toBeVisible()
+  await expect(page.locator('.track-ledger .ledger-transition-cue.verdict-compatible').first()).toBeVisible()
+  await expect(fieldTest.locator('.transition-direction, .transition-sparkle')).toHaveCount(0)
   await expect(fieldTest.getByText(/Cueflow will favor this pairing/i)).toBeVisible()
   await page.reload()
   await mockDesktopWaveform(page)

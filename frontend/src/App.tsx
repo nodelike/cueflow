@@ -1,5 +1,5 @@
-import { AlertCircle, Check, Disc3, Link2, Moon, RefreshCw, Send, Sun } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AlertCircle, ArrowDown, Check, Disc3, Link2, Moon, RefreshCw, Send, Sparkles, Sun, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { bootstrap, connectSpotify, enrichTrack, generateSets, needsReview, publishSet, saveTransitionFeedback, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists } from './api'
 import { GeneratorPanel } from './components/GeneratorPanel'
 import { CamelotKey } from './components/CamelotKey'
@@ -112,9 +112,10 @@ function App() {
   }
 
   const activeDraft = drafts[selectedDraft]
+  const feedbackByTransition = useMemo(() => new Map(transitionFeedback.map((item) => [`${item.fromTrackId}\u0000${item.toTrackId}`, item])), [transitionFeedback])
   const activeTrack = activeDraft?.tracks.find((item) => item.position === selectedPosition) ?? activeDraft?.tracks[0]
   const nextTrack = activeTrack && activeDraft?.tracks.find((item) => item.transition.fromTrackId === activeTrack.track.id)
-  const activeTransitionFeedback = activeTrack && nextTrack ? transitionFeedback.find((item) => item.fromTrackId === activeTrack.track.id && item.toTrackId === nextTrack.track.id) : undefined
+  const activeTransitionFeedback = activeTrack && nextTrack ? feedbackByTransition.get(`${activeTrack.track.id}\u0000${nextTrack.track.id}`) : undefined
 
   return (
     <div className="app-shell">
@@ -151,9 +152,13 @@ function App() {
                 <div className="track-ledger" aria-label="Set track list">
                   <div className="ledger-head"><span>#</span><span /><span>Track</span><span>BPM</span><span>Key</span><span>Energy</span></div>
                   <div className="ledger-scroll">
-                    {activeDraft.tracks.map((item) => <button type="button" key={item.track.id} className={item.position === selectedPosition ? 'selected' : ''} onClick={() => setSelectedPosition(item.position)} aria-label={`${item.position}. ${item.track.title} by ${item.track.artist}`}>
-                      <span>{String(item.position).padStart(2, '0')}</span><TrackArtwork track={item.track} /><span><strong>{item.track.title}</strong><small>{item.track.artist}</small></span><b>{item.track.bpm}</b><CamelotKey value={item.track.camelot} compact /><i><span style={{ width: `${item.track.energy * 100}%` }} /></i>
-                    </button>)}
+                    {activeDraft.tracks.map((item) => {
+                      const verdict = feedbackByTransition.get(`${item.transition.fromTrackId}\u0000${item.transition.toTrackId}`)?.verdict
+                      return <button type="button" key={item.track.id} className={[item.position === selectedPosition ? 'selected' : '', verdict ? `verdict-${verdict}` : ''].filter(Boolean).join(' ')} onClick={() => setSelectedPosition(item.position)} aria-label={`${item.position}. ${item.track.title} by ${item.track.artist}${verdict ? `, incoming transition ${verdict}` : ''}`}>
+                        <span>{String(item.position).padStart(2, '0')}</span><TrackArtwork track={item.track} /><span><strong>{item.track.title}</strong><small>{item.track.artist}</small></span><b>{item.track.bpm}</b><CamelotKey value={item.track.camelot} compact /><i><span style={{ width: `${item.track.energy * 100}%` }} /></i>
+                        {verdict && <span className={`ledger-transition-cue verdict-${verdict}`} aria-hidden="true">{verdict === 'compatible' ? <><ArrowDown size={10} /><Sparkles size={9} /></> : <X size={9} />}</span>}
+                      </button>
+                    })}
                   </div>
                 </div>
                 <SetInspector item={activeTrack} nextItem={nextTrack} feedback={activeTransitionFeedback} saving={savingTransition !== ''} onFeedback={(fromTrackId, toTrackId, verdict) => void recordTransition(fromTrackId, toTrackId, verdict)} />
