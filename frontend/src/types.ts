@@ -88,6 +88,15 @@ export type Transition = {
   plan?: TransitionPlan
 }
 
+export type TransitionVerdict = 'compatible' | 'incompatible'
+
+export type TransitionFeedback = {
+  fromTrackId: string
+  toTrackId: string
+  verdict: TransitionVerdict
+  recordedAt: string
+}
+
 export type SetTrack = {
   position: number
   track: Track
@@ -125,6 +134,7 @@ export type Bootstrap = {
   draftCount: number
   tracks: Track[]
   drafts: SetDraft[]
+  transitionFeedback: TransitionFeedback[]
   error?: string
 }
 
@@ -160,6 +170,7 @@ declare global {
           NeedsReview: () => Promise<Track[]>
           EnrichTrack: (input: TrackEnrichment) => Promise<void>
           TrackWaveform: (trackId: string) => Promise<TrackWaveform>
+          SaveTransitionFeedback: (feedback: TransitionFeedback) => Promise<TransitionFeedback>
         }
       }
     }

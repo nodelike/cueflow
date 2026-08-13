@@ -12,6 +12,7 @@ const spotifyConnected = vi.fn()
 const spotifyPlaylists = vi.fn()
 const syncSpotifyPlaylists = vi.fn()
 const trackWaveform = vi.fn()
+const saveTransitionFeedback = vi.fn()
 vi.mock('./api', () => ({
   bootstrap: () => bootstrap(),
   generateSets: (...args: unknown[]) => generateSets(...args),
@@ -24,6 +25,7 @@ vi.mock('./api', () => ({
   needsReview: () => needsReview(),
   enrichTrack: (...args: unknown[]) => enrichTrack(...args),
   trackWaveform: (...args: unknown[]) => trackWaveform(...args),
+  saveTransitionFeedback: (...args: unknown[]) => saveTransitionFeedback(...args),
 }))
 
 describe('Cueflow set desk', () => {
@@ -38,6 +40,7 @@ describe('Cueflow set desk', () => {
       analyzerVersion: 'fixture/1',
       waveform: Array.from({ length: 12 }, (_, index) => ({ startSeconds: index, endSeconds: index + 1, rms: .12 + index * .015, peak: .3 + index * .025 })),
     }))
+    saveTransitionFeedback.mockImplementation((fromTrackId: string, toTrackId: string, verdict: 'compatible' | 'incompatible') => Promise.resolve({ fromTrackId, toTrackId, verdict, recordedAt: '2026-08-13T12:00:00Z' }))
   })
 
   it('renders the persisted set and exposes transition reasoning', async () => {
@@ -55,6 +58,23 @@ describe('Cueflow set desk', () => {
     expect(screen.getByText(/Transition in · cue-window plan/i)).toBeInTheDocument()
     expect(screen.getByText(/bass exchange at bar 8/i)).toBeInTheDocument()
     expect(screen.getByText('adjacent Camelot movement')).toBeInTheDocument()
+  })
+
+  it('captures a field-tested transition in one tap and lets the verdict change', async () => {
+    render(<App />)
+    await screen.findByText('Afro to pressure — A')
+    const fieldTest = screen.getByLabelText('Field test Salt Horizon into Clay Drums')
+    expect(within(fieldTest).getByText(/tap what your ears say/i)).toBeInTheDocument()
+
+    await userEvent.click(within(fieldTest).getByRole('button', { name: 'Works' }))
+    await waitFor(() => expect(saveTransitionFeedback).toHaveBeenCalledWith('one', 'two', 'compatible'))
+    expect(within(fieldTest).getByRole('button', { name: 'Works' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(fieldTest).getByText(/future sets can reuse it/i)).toBeInTheDocument()
+
+    await userEvent.click(within(fieldTest).getByRole('button', { name: "Doesn't" }))
+    await waitFor(() => expect(saveTransitionFeedback).toHaveBeenLastCalledWith('one', 'two', 'incompatible'))
+    expect(within(fieldTest).getByRole('button', { name: "Doesn't" })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(fieldTest).getByText(/future sets will steer away/i)).toBeInTheDocument()
   })
 
   it('submits the tunable set brief', async () => {

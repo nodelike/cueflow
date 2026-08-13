@@ -1,6 +1,6 @@
 import { AlertCircle, Check, Disc3, Link2, Moon, RefreshCw, Send, Sun } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { bootstrap, connectSpotify, enrichTrack, generateSets, needsReview, publishSet, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists } from './api'
+import { bootstrap, connectSpotify, enrichTrack, generateSets, needsReview, publishSet, saveTransitionFeedback, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists } from './api'
 import { GeneratorPanel } from './components/GeneratorPanel'
 import { CamelotKey } from './components/CamelotKey'
 import { MixRibbon } from './components/MixRibbon'
@@ -11,7 +11,7 @@ import { WaveformPanel } from './components/WaveformPanel'
 import { formatDate, formatDuration } from './lib/format'
 import { getSavedRequiredTrackIDs, getSavedSourcePlaylistIDs, saveRequiredTrackIDs, saveSourcePlaylistIDs } from './lib/preferences'
 import { getInitialTheme, saveTheme, type Theme } from './lib/theme'
-import type { Bootstrap, GenerateRequest, SetDraft, SpotifyPlaylist, Track, TrackEnrichment } from './types'
+import type { Bootstrap, GenerateRequest, SetDraft, SpotifyPlaylist, Track, TrackEnrichment, TransitionFeedback, TransitionVerdict } from './types'
 import './App.css'
 
 const initialRequest: GenerateRequest = {
@@ -34,6 +34,8 @@ function App() {
   const [researchQueue, setResearchQueue] = useState<Track[]>([])
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([])
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
+  const [transitionFeedback, setTransitionFeedback] = useState<TransitionFeedback[]>([])
+  const [savingTransition, setSavingTransition] = useState('')
 
   useEffect(() => { void load() }, [])
   useEffect(() => { saveTheme(theme) }, [theme])
@@ -44,7 +46,7 @@ function App() {
     try {
       const [result, connected, queue] = await Promise.all([bootstrap(), spotifyConnected(), needsReview()])
       if (result.error) throw new Error(result.error)
-      setData(result); setDrafts(result.drafts); setSpotifyReady(connected); setResearchQueue(queue)
+      setData(result); setDrafts(result.drafts); setTransitionFeedback(result.transitionFeedback ?? []); setSpotifyReady(connected); setResearchQueue(queue)
       if (connected) setPlaylists(await spotifyPlaylists())
     } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)) }
   }
@@ -94,9 +96,25 @@ function App() {
     finally { setBusy(false) }
   }
 
+  async function recordTransition(fromTrackId: string, toTrackId: string, verdict: TransitionVerdict) {
+    const key = `${fromTrackId}\u0000${toTrackId}`
+    const previous = transitionFeedback
+    const optimistic: TransitionFeedback = { fromTrackId, toTrackId, verdict, recordedAt: new Date().toISOString() }
+    setSavingTransition(key); setError('')
+    setTransitionFeedback((current) => [optimistic, ...current.filter((item) => item.fromTrackId !== fromTrackId || item.toTrackId !== toTrackId)])
+    try {
+      const saved = await saveTransitionFeedback(fromTrackId, toTrackId, verdict)
+      setTransitionFeedback((current) => [saved, ...current.filter((item) => item.fromTrackId !== fromTrackId || item.toTrackId !== toTrackId)])
+    } catch (caught) {
+      setTransitionFeedback(previous)
+      setError(caught instanceof Error ? caught.message : String(caught))
+    } finally { setSavingTransition('') }
+  }
+
   const activeDraft = drafts[selectedDraft]
   const activeTrack = activeDraft?.tracks.find((item) => item.position === selectedPosition) ?? activeDraft?.tracks[0]
   const nextTrack = activeTrack && activeDraft?.tracks.find((item) => item.transition.fromTrackId === activeTrack.track.id)
+  const activeTransitionFeedback = activeTrack && nextTrack ? transitionFeedback.find((item) => item.fromTrackId === activeTrack.track.id && item.toTrackId === nextTrack.track.id) : undefined
 
   return (
     <div className="app-shell">
@@ -127,7 +145,7 @@ function App() {
                 <div className="score-summary"><span>Energy <b>{Math.round(activeDraft.energyFit)}</b></span><span>Harmony <b>{Math.round(activeDraft.harmonicFlow)}</b></span><span>Tempo <b>{Math.round(activeDraft.tempoFlow)}</b></span><span>Safety <b>{Math.round(activeDraft.transitionSafety)}</b></span></div>
               </div>
 
-              <MixRibbon draft={activeDraft} selectedPosition={selectedPosition} onSelect={setSelectedPosition} />
+              <MixRibbon draft={activeDraft} selectedPosition={selectedPosition} feedback={transitionFeedback} onSelect={setSelectedPosition} />
 
               <div className="set-body">
                 <div className="track-ledger" aria-label="Set track list">
@@ -138,7 +156,7 @@ function App() {
                     </button>)}
                   </div>
                 </div>
-                <SetInspector item={activeTrack} />
+                <SetInspector item={activeTrack} nextItem={nextTrack} feedback={activeTransitionFeedback} saving={savingTransition !== ''} onFeedback={(fromTrackId, toTrackId, verdict) => void recordTransition(fromTrackId, toTrackId, verdict)} />
               </div>
             </div>}
           </section>

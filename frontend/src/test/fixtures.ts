@@ -17,4 +17,4 @@ export const draft: SetDraft = {
   ],
 }
 
-export const bootstrapData: Bootstrap = { databaseReady: true, trackCount: 40, draftCount: 1, tracks: draft.tracks.map((item) => item.track), drafts: [draft] }
+export const bootstrapData: Bootstrap = { databaseReady: true, trackCount: 40, draftCount: 1, tracks: draft.tracks.map((item) => item.track), drafts: [draft], transitionFeedback: [] }

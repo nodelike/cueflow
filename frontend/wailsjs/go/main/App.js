@@ -26,6 +26,10 @@ export function PublishSet(arg1) {
   return window['go']['main']['App']['PublishSet'](arg1);
 }
 
+export function SaveTransitionFeedback(arg1) {
+  return window['go']['main']['App']['SaveTransitionFeedback'](arg1);
+}
+
 export function SeedReferenceCatalog() {
   return window['go']['main']['App']['SeedReferenceCatalog']();
 }

@@ -15,6 +15,8 @@ export function NeedsReview():Promise<Array<domain.Track>>;
 
 export function PublishSet(arg1:string):Promise<spotify.Playlist>;
 
+export function SaveTransitionFeedback(arg1:domain.TransitionFeedback):Promise<domain.TransitionFeedback>;
+
 export function SeedReferenceCatalog():Promise<domain.Bootstrap>;
 
 export function SpotifyConnected():Promise<boolean>;

@@ -1,4 +1,4 @@
-import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, SpotifyPlaylist, Track, TrackEnrichment, TrackWaveform } from './types'
+import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, SpotifyPlaylist, Track, TrackEnrichment, TrackWaveform, TransitionFeedback, TransitionVerdict } from './types'
 
 const API_ROOT = import.meta.env.VITE_CUEFLOW_API_URL ?? 'http://127.0.0.1:8787'
 
@@ -82,4 +82,14 @@ export async function enrichTrack(input: TrackEnrichment): Promise<void> {
 export async function trackWaveform(trackId: string): Promise<TrackWaveform> {
   if (desktop()) return desktop()!.TrackWaveform(trackId)
   return json<TrackWaveform>(await fetch(`${API_ROOT}/api/tracks/${encodeURIComponent(trackId)}/waveform`))
+}
+
+export async function saveTransitionFeedback(fromTrackId: string, toTrackId: string, verdict: TransitionVerdict): Promise<TransitionFeedback> {
+  const feedback = { fromTrackId, toTrackId, verdict, recordedAt: new Date().toISOString() }
+  if (desktop()) return desktop()!.SaveTransitionFeedback(feedback)
+  return json<TransitionFeedback>(await fetch(`${API_ROOT}/api/transitions/${encodeURIComponent(fromTrackId)}/to/${encodeURIComponent(toTrackId)}/feedback`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ verdict }),
+  }))
 }

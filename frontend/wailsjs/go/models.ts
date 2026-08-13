@@ -46,6 +46,25 @@ export namespace domain {
 		    return a;
 		}
 	}
+	export class TransitionFeedback {
+	    fromTrackId: string;
+	    toTrackId: string;
+	    verdict: string;
+	    // Go type: time
+	    recordedAt: any;
+
+	    static createFrom(source: any = {}) {
+	        return new TransitionFeedback(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fromTrackId = source["fromTrackId"];
+	        this.toTrackId = source["toTrackId"];
+	        this.verdict = source["verdict"];
+	        this.recordedAt = source["recordedAt"];
+	    }
+	}
 
 	export class TransitionPlan {
 	    version: string;
@@ -359,6 +378,7 @@ export namespace domain {
 	    draftCount: number;
 	    tracks: Track[];
 	    drafts: SetDraft[];
+	    transitionFeedback: TransitionFeedback[];
 	    error?: string;
 
 	    static createFrom(source: any = {}) {
@@ -372,6 +392,7 @@ export namespace domain {
 	        this.draftCount = source["draftCount"];
 	        this.tracks = this.convertValues(source["tracks"], Track);
 	        this.drafts = this.convertValues(source["drafts"], SetDraft);
+	        this.transitionFeedback = this.convertValues(source["transitionFeedback"], TransitionFeedback);
 	        this.error = source["error"];
 	    }
 
