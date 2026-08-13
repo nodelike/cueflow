@@ -49,16 +49,15 @@ function App() {
   useEffect(() => { saveRequiredTrackIDs(request.requiredTrackIds) }, [request.requiredTrackIds])
   useEffect(() => { saveSourcePlaylistIDs(request.sourcePlaylistIds) }, [request.sourcePlaylistIds])
 
-  const notify = useCallback((tone: Toast['tone'], message: string) => {
+  const notify = useCallback((message: string) => {
     const id = ++toastID.current
-    setToasts((current) => [...current, { id, tone, message }])
+    setToasts((current) => [...current, { id, message }])
     window.setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 4200)
   }, [])
 
+  // Failures stay on screen until dismissed; only successes are transient.
   function report(caught: unknown) {
-    const message = caught instanceof Error ? caught.message : String(caught)
-    setError(message)
-    notify('bad', message)
+    setError(caught instanceof Error ? caught.message : String(caught))
   }
 
   async function load() {
@@ -99,7 +98,7 @@ function App() {
       setSelectedPosition(1)
       setSection('studio')
       setData((current) => current ? { ...current, draftCount: current.draftCount + result.length, drafts: result } : current)
-      notify('ok', `${result.length} variations ready`)
+      notify(`${result.length} variations ready`)
     } catch (caught) {
       report(caught)
     } finally {
@@ -113,7 +112,7 @@ function App() {
     setBusy(true)
     try {
       const playlist = await publishSet(draft.id)
-      notify('ok', `Published ${playlist.Name}`)
+      notify(`Published ${playlist.Name}`)
       if (spotifyReady) setPlaylists(await spotifyPlaylists())
     } catch (caught) {
       report(caught)
@@ -128,7 +127,7 @@ function App() {
       await connectSpotify()
       setSpotifyReady(true)
       setPlaylists(await spotifyPlaylists())
-      notify('ok', 'Spotify connected')
+      notify('Spotify connected')
     } catch (caught) {
       report(caught)
     } finally {
@@ -146,7 +145,7 @@ function App() {
       setDrafts(result.drafts)
       setPlaylists(await spotifyPlaylists())
       setResearchQueue(await needsReview())
-      notify('ok', playlistIDs.length === 1 ? 'Crate synced into the library' : `${playlistIDs.length} crates synced`)
+      notify(playlistIDs.length === 1 ? 'Crate synced into the library' : `${playlistIDs.length} crates synced`)
     } catch (caught) {
       report(caught)
     } finally {
@@ -162,7 +161,7 @@ function App() {
       const [result, queue] = await Promise.all([bootstrap(), needsReview()])
       setData(result)
       setResearchQueue(queue)
-      notify('ok', 'Features verified')
+      notify('Features verified')
     } catch (caught) {
       report(caught)
     } finally {
