@@ -54,6 +54,7 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   await expect(page.getByRole('tab')).toHaveCount(3)
   const fieldTest = page.getByLabel(/Field test .* into .*/)
   await fieldTest.getByRole('button', { name: 'Mark this transition compatible' }).click()
+  await expect(fieldTest.getByText('Verified works')).toBeVisible()
   await expect(fieldTest.getByText(/Cueflow will favor this pairing/i)).toBeVisible()
   await page.reload()
   await expect(page.getByLabel(/Field test .* into .*/).getByRole('button', { name: 'Mark this transition compatible' })).toHaveAttribute('aria-pressed', 'true')

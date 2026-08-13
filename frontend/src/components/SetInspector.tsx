@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Headphones, X } from 'lucide-react'
+import { ArrowRight, Check, Headphones, Sparkles, X } from 'lucide-react'
 import type { SetTrack, TransitionFeedback, TransitionVerdict } from '../types'
 import { CamelotKey } from './CamelotKey'
 import { TrackArtwork } from './TrackArtwork'
@@ -16,9 +16,10 @@ export function SetInspector({ item, nextItem, feedback, saving = false, onFeedb
   return (
     <aside className="track-inspector" aria-label="Track and transition inspector">
       <header className="inspector-title"><TrackArtwork track={item.track} linked /><div><span>Track {String(item.position).padStart(2, '0')}</span><h2>{item.track.title}</h2><p>{item.track.artist}</p></div></header>
-      {nextItem && <section className="transition-check" aria-label={`Field test ${item.track.title} into ${nextItem.track.title}`}>
-        <header><span><Headphones size={13} /> Try next</span><strong>{feedback ? 'Saved' : nextItem.transition.plan ? `${nextItem.transition.plan.bars}-bar test` : 'Untested'}</strong></header>
+      {nextItem && <section className={`transition-check${feedback ? ` verdict-${feedback.verdict}` : ''}`} aria-label={`Field test ${item.track.title} into ${nextItem.track.title}`}>
+        <header><span><Headphones size={13} /> Try next</span><strong className="transition-verdict">{feedback?.verdict === 'compatible' ? <><Sparkles size={11} aria-hidden="true" /> Verified works</> : feedback?.verdict === 'incompatible' ? 'Saved clash' : nextItem.transition.plan ? `${nextItem.transition.plan.bars}-bar test` : 'Untested'}</strong></header>
         <div className="transition-target">
+          <span className="transition-direction" aria-hidden="true"><ArrowRight size={18} />{feedback?.verdict === 'compatible' && <Sparkles className="transition-sparkle" size={12} />}</span>
           <TrackArtwork track={nextItem.track} />
           <div><span>Track {String(nextItem.position).padStart(2, '0')}</span><strong>{nextItem.track.title}</strong><small>{nextItem.track.artist} · {nextItem.track.bpm} BPM · {nextItem.track.camelot}</small></div>
         </div>

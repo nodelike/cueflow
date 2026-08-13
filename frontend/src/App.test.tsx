@@ -69,6 +69,7 @@ describe('Cueflow set desk', () => {
     await userEvent.click(within(fieldTest).getByRole('button', { name: 'Mark this transition compatible' }))
     await waitFor(() => expect(saveTransitionFeedback).toHaveBeenCalledWith('one', 'two', 'compatible'))
     expect(within(fieldTest).getByRole('button', { name: 'Mark this transition compatible' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(fieldTest).getByText('Verified works')).toBeInTheDocument()
     expect(within(fieldTest).getByText(/Cueflow will favor this pairing/i)).toBeInTheDocument()
 
     await userEvent.click(within(fieldTest).getByRole('button', { name: 'Mark this transition incompatible' }))
