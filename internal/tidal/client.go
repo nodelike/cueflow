@@ -92,7 +92,10 @@ func (c *Client) AddPlaylistItems(ctx context.Context, playlistID string, trackI
 			}
 			items = append(items, resourceIdentifier{Type: "tracks", ID: trackID})
 		}
-		body := map[string]any{"data": items, "meta": map[string]string{"positionBefore": positionBefore}}
+		body := map[string]any{"data": items}
+		if strings.TrimSpace(positionBefore) != "" {
+			body["meta"] = map[string]string{"positionBefore": positionBefore}
+		}
 		if err := c.sendJSON(ctx, http.MethodPost, "/playlists/"+url.PathEscape(playlistID)+"/relationships/items", body, nil, true); err != nil {
 			return err
 		}

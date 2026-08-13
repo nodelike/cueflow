@@ -182,7 +182,7 @@ func TestAddPlaylistItemsAppendsInTidalBatches(t *testing.T) {
 		case "POST /playlists/preview/relationships/items":
 			addCalls++
 			payload, _ := io.ReadAll(request.Body)
-			if !strings.Contains(string(payload), `"positionBefore":""`) || request.Header.Get("Idempotency-Key") == "" {
+			if strings.Contains(string(payload), `"positionBefore"`) || request.Header.Get("Idempotency-Key") == "" {
 				t.Fatalf("invalid add request: %s", payload)
 			}
 			writer.Write([]byte(`{"data":[]}`))
