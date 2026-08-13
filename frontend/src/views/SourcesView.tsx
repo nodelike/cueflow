@@ -92,8 +92,8 @@ export function SourcesView({ playlists, crates, tracks, spotifyReady, tidal, bu
               <p>{!tidal.configured
                 ? 'Add CUEFLOW_TIDAL_CLIENT_ID and restart Cueflow.'
                 : tidal.connected
-                  ? 'Connected for disposable preview playlists. Verify writes before publishing.'
-                  : 'Connect to publish generated variations for immediate testing in djay Pro.'}</p>
+                  ? 'Connected for temporary djay previews and permanent saved sets. Verify writes before publishing.'
+                  : 'Connect to try generated variations in djay Pro and save the winner permanently.'}</p>
             </div>
             {tidal.connected
               ? <button type="button" className="btn" disabled={busy} onClick={onProbeTidal}><Check size={14} /> Verify access</button>

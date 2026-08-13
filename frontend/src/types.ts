@@ -184,6 +184,8 @@ declare global {
           ConnectTidal: () => Promise<void>
           ProbeTidalCapabilities: (trackId: string) => Promise<TidalCapabilityReport>
           PublishTidalPreviews: (draftIds: string[]) => Promise<TidalPreviewBatch>
+          TidalSavedSets: () => Promise<TidalSavedSet[]>
+          SaveTidalSet: (draftId: string) => Promise<TidalSavedSet>
           PublishSet: (draftId: string) => Promise<PublishedPlaylist>
           NeedsReview: () => Promise<Track[]>
           EnrichTrack: (input: TrackEnrichment) => Promise<void>
@@ -236,4 +238,14 @@ export type TidalPreviewBatch = {
   matchedTracks: number
   deletedPrevious: number
   warnings: string[]
+}
+
+export type TidalSavedSet = {
+  playlistId: string
+  draftId: string
+  sessionId: string
+  variation: number
+  name: string
+  trackCount: number
+  createdAt: string
 }

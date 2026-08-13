@@ -1,12 +1,12 @@
 import { AlertCircle } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { bootstrap, connectSpotify, connectTidal, enrichTrack, generateSets, needsReview, probeTidalCapabilities, publishSet, publishTidalPreviews, saveTransitionFeedback, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists, tidalStatus } from './api'
+import { bootstrap, connectSpotify, connectTidal, enrichTrack, generateSets, needsReview, probeTidalCapabilities, publishSet, publishTidalPreviews, saveTidalSet, saveTransitionFeedback, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists, tidalSavedSets, tidalStatus } from './api'
 import { Sidebar } from './components/shell/Sidebar'
 import { Toasts, type Toast } from './components/shell/Toasts'
 import { transitionKey } from './components/studio/MixSheet'
 import { getSavedRequiredTrackIDs, getSavedSection, getSavedSourcePlaylistIDs, saveRequiredTrackIDs, saveSection, saveSourcePlaylistIDs } from './lib/preferences'
 import { getInitialTheme, saveTheme, type Theme } from './lib/theme'
-import type { Bootstrap, GenerateRequest, Section, SetDraft, SpotifyPlaylist, TidalStatus, Track, TrackEnrichment, TransitionVerdict } from './types'
+import type { Bootstrap, GenerateRequest, Section, SetDraft, SpotifyPlaylist, TidalSavedSet, TidalStatus, Track, TrackEnrichment, TransitionVerdict } from './types'
 import { LibraryView } from './views/LibraryView'
 import { ResearchView } from './views/ResearchView'
 import { SourcesView } from './views/SourcesView'
@@ -37,6 +37,7 @@ function App() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const [spotifyReady, setSpotifyReady] = useState(false)
   const [tidal, setTidal] = useState<TidalStatus>({ configured: false, connected: false, grantedScopes: [] })
+  const [savedSets, setSavedSets] = useState<TidalSavedSet[]>([])
   const [researchQueue, setResearchQueue] = useState<Track[]>([])
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([])
   const [syncing, setSyncing] = useState<string[]>([])
@@ -63,12 +64,13 @@ function App() {
 
   async function load() {
     try {
-      const [result, connected, tidalConnection, queue] = await Promise.all([bootstrap(), spotifyConnected(), tidalStatus(), needsReview()])
+      const [result, connected, tidalConnection, queue, permanentSets] = await Promise.all([bootstrap(), spotifyConnected(), tidalStatus(), needsReview(), tidalSavedSets()])
       if (result.error) throw new Error(result.error)
       setData(result)
       setDrafts(result.drafts)
       setSpotifyReady(connected)
       setTidal(tidalConnection)
+      setSavedSets(permanentSets)
       setResearchQueue(queue)
       setError('')
       if (connected) setPlaylists(await spotifyPlaylists())
@@ -131,6 +133,22 @@ function App() {
       const result = await publishTidalPreviews(drafts.map((draft) => draft.id))
       const warning = result.warnings.length > 0 ? ` · ${result.warnings.length} cleanup warning` : ''
       notify(`${result.playlists.length} TIDAL variations ready in djay Pro${warning}`)
+    } catch (caught) {
+      report(caught)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveSelectedTidalSet() {
+    const draft = drafts[selectedDraft]
+    if (!draft) return
+    setBusy(true)
+    setError('')
+    try {
+      const saved = await saveTidalSet(draft.id)
+      setSavedSets((current) => [saved, ...current.filter((set) => set.draftId !== saved.draftId)])
+      notify(`${draft.name} saved permanently in TIDAL`)
     } catch (caught) {
       report(caught)
     } finally {
@@ -273,11 +291,13 @@ function App() {
           savingTransition={savingTransition}
           spotifyReady={spotifyReady}
           tidalReady={tidal.connected}
+          savedSet={drafts[selectedDraft] ? savedSets.find((set) => set.draftId === drafts[selectedDraft].id) : undefined}
           busy={busy}
           onRequestChange={setRequest}
           onGenerate={() => void generate()}
           onPublish={() => void publish()}
           onPreviewTidal={() => void previewInTidal()}
+          onSaveTidal={() => void saveSelectedTidalSet()}
           onSelectDraft={(index) => { setSelectedDraft(index); setSelectedPosition(1) }}
           onSelectPosition={setSelectedPosition}
           onFeedback={(fromTrackId, toTrackId, verdict) => void recordTransition(fromTrackId, toTrackId, verdict)}

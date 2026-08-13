@@ -1,13 +1,13 @@
 export namespace domain {
-	
+
 	export class AutomationPoint {
 	    bar: number;
 	    value: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new AutomationPoint(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.bar = source["bar"];
@@ -17,17 +17,17 @@ export namespace domain {
 	export class AutomationLane {
 	    target: string;
 	    points: AutomationPoint[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new AutomationLane(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.target = source["target"];
 	        this.points = this.convertValues(source["points"], AutomationPoint);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -46,18 +46,18 @@ export namespace domain {
 		    return a;
 		}
 	}
-	
+
 	export class TransitionFeedback {
 	    fromTrackId: string;
 	    toTrackId: string;
 	    verdict: string;
 	    // Go type: time
 	    recordedAt: any;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TransitionFeedback(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.fromTrackId = source["fromTrackId"];
@@ -65,7 +65,7 @@ export namespace domain {
 	        this.verdict = source["verdict"];
 	        this.recordedAt = this.convertValues(source["recordedAt"], null);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -92,11 +92,11 @@ export namespace domain {
 	    trackCount: number;
 	    // Go type: time
 	    syncedAt: any;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new SourcePlaylist(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -106,7 +106,7 @@ export namespace domain {
 	        this.trackCount = source["trackCount"];
 	        this.syncedAt = this.convertValues(source["syncedAt"], null);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -144,11 +144,11 @@ export namespace domain {
 	    automation: AutomationLane[];
 	    notes: string[];
 	    renderValidationRequired: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TransitionPlan(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.version = source["version"];
@@ -170,7 +170,7 @@ export namespace domain {
 	        this.notes = source["notes"];
 	        this.renderValidationRequired = source["renderValidationRequired"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -193,11 +193,11 @@ export namespace domain {
 	    name: string;
 	    score: number;
 	    note: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ScoreComponent(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -217,11 +217,11 @@ export namespace domain {
 	    summary: string;
 	    components: ScoreComponent[];
 	    plan?: TransitionPlan;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Transition(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.fromTrackId = source["fromTrackId"];
@@ -236,7 +236,7 @@ export namespace domain {
 	        this.components = this.convertValues(source["components"], ScoreComponent);
 	        this.plan = this.convertValues(source["plan"], TransitionPlan);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -260,11 +260,11 @@ export namespace domain {
 	    track: Track;
 	    targetEnergy: number;
 	    transition: Transition;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new SetTrack(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.position = source["position"];
@@ -272,7 +272,7 @@ export namespace domain {
 	        this.targetEnergy = source["targetEnergy"];
 	        this.transition = this.convertValues(source["transition"], Transition);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -314,11 +314,11 @@ export namespace domain {
 	    // Go type: time
 	    createdAt: any;
 	    tracks: SetTrack[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new SetDraft(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -343,7 +343,7 @@ export namespace domain {
 	        this.createdAt = this.convertValues(source["createdAt"], null);
 	        this.tracks = this.convertValues(source["tracks"], SetTrack);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -384,11 +384,11 @@ export namespace domain {
 	    featureConfidence: number;
 	    featureProvenance: string;
 	    featureNeedsReview: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Track(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -412,7 +412,7 @@ export namespace domain {
 	        this.featureProvenance = source["featureProvenance"];
 	        this.featureNeedsReview = source["featureNeedsReview"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -440,11 +440,11 @@ export namespace domain {
 	    syncedPlaylists: SourcePlaylist[];
 	    transitionFeedback: TransitionFeedback[];
 	    error?: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Bootstrap(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.databaseReady = source["databaseReady"];
@@ -456,7 +456,7 @@ export namespace domain {
 	        this.transitionFeedback = this.convertValues(source["transitionFeedback"], TransitionFeedback);
 	        this.error = source["error"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -489,11 +489,11 @@ export namespace domain {
 	    requiredTrackIds?: string[];
 	    excludedTrackIds?: string[];
 	    seed: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new GenerateRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -511,11 +511,11 @@ export namespace domain {
 	        this.seed = source["seed"];
 	    }
 	}
-	
-	
-	
-	
-	
+
+
+
+
+
 	export class TrackEnrichment {
 	    trackId: string;
 	    bpm: number;
@@ -527,11 +527,11 @@ export namespace domain {
 	    role: string;
 	    source: string;
 	    confidence: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TrackEnrichment(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.trackId = source["trackId"];
@@ -551,11 +551,11 @@ export namespace domain {
 	    endSeconds: number;
 	    rms: number;
 	    peak: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WaveformPoint(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.startSeconds = source["startSeconds"];
@@ -569,11 +569,11 @@ export namespace domain {
 	    durationSeconds: number;
 	    analyzerVersion?: string;
 	    waveform: WaveformPoint[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TrackWaveform(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.trackId = source["trackId"];
@@ -581,7 +581,7 @@ export namespace domain {
 	        this.analyzerVersion = source["analyzerVersion"];
 	        this.waveform = this.convertValues(source["waveform"], WaveformPoint);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -600,14 +600,14 @@ export namespace domain {
 		    return a;
 		}
 	}
-	
-	
-	
+
+
+
 
 }
 
 export namespace spotify {
-	
+
 	export class Playlist {
 	    ID: string;
 	    Name: string;
@@ -616,11 +616,11 @@ export namespace spotify {
 	    ImageURL: string;
 	    TrackCount: number;
 	    Synced: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Playlist(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.ID = source["ID"];
@@ -630,6 +630,176 @@ export namespace spotify {
 	        this.ImageURL = source["ImageURL"];
 	        this.TrackCount = source["TrackCount"];
 	        this.Synced = source["Synced"];
+	    }
+	}
+
+}
+
+export namespace tidal {
+
+	export class CapabilityReport {
+	    configured: boolean;
+	    connected: boolean;
+	    grantedScopes: string[];
+	    createPlaylist: boolean;
+	    readPlaylist: boolean;
+	    addPlaylistItem: boolean;
+	    deletePlaylist: boolean;
+	    probePlaylistId?: string;
+	    message: string;
+
+	    static createFrom(source: any = {}) {
+	        return new CapabilityReport(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.configured = source["configured"];
+	        this.connected = source["connected"];
+	        this.grantedScopes = source["grantedScopes"];
+	        this.createPlaylist = source["createPlaylist"];
+	        this.readPlaylist = source["readPlaylist"];
+	        this.addPlaylistItem = source["addPlaylistItem"];
+	        this.deletePlaylist = source["deletePlaylist"];
+	        this.probePlaylistId = source["probePlaylistId"];
+	        this.message = source["message"];
+	    }
+	}
+	export class PreviewPlaylist {
+	    playlistId: string;
+	    draftId: string;
+	    sessionId: string;
+	    variation: number;
+	    name: string;
+	    // Go type: time
+	    createdAt: any;
+
+	    static createFrom(source: any = {}) {
+	        return new PreviewPlaylist(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.playlistId = source["playlistId"];
+	        this.draftId = source["draftId"];
+	        this.sessionId = source["sessionId"];
+	        this.variation = source["variation"];
+	        this.name = source["name"];
+	        this.createdAt = this.convertValues(source["createdAt"], null);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class PreviewBatch {
+	    playlists: PreviewPlaylist[];
+	    matchedTracks: number;
+	    deletedPrevious: number;
+	    warnings: string[];
+
+	    static createFrom(source: any = {}) {
+	        return new PreviewBatch(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.playlists = this.convertValues(source["playlists"], PreviewPlaylist);
+	        this.matchedTracks = source["matchedTracks"];
+	        this.deletedPrevious = source["deletedPrevious"];
+	        this.warnings = source["warnings"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+	export class SavedSet {
+	    playlistId: string;
+	    draftId: string;
+	    sessionId: string;
+	    variation: number;
+	    name: string;
+	    trackCount: number;
+	    // Go type: time
+	    createdAt: any;
+
+	    static createFrom(source: any = {}) {
+	        return new SavedSet(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.playlistId = source["playlistId"];
+	        this.draftId = source["draftId"];
+	        this.sessionId = source["sessionId"];
+	        this.variation = source["variation"];
+	        this.name = source["name"];
+	        this.trackCount = source["trackCount"];
+	        this.createdAt = this.convertValues(source["createdAt"], null);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Status {
+	    configured: boolean;
+	    connected: boolean;
+	    grantedScopes: string[];
+
+	    static createFrom(source: any = {}) {
+	        return new Status(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.configured = source["configured"];
+	        this.connected = source["connected"];
+	        this.grantedScopes = source["grantedScopes"];
 	    }
 	}
 

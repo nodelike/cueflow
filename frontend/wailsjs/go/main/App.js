@@ -10,6 +10,10 @@ export function ConnectSpotify() {
   return window['go']['main']['App']['ConnectSpotify']();
 }
 
+export function ConnectTidal() {
+  return window['go']['main']['App']['ConnectTidal']();
+}
+
 export function EnrichTrack(arg1) {
   return window['go']['main']['App']['EnrichTrack'](arg1);
 }
@@ -22,8 +26,20 @@ export function NeedsReview() {
   return window['go']['main']['App']['NeedsReview']();
 }
 
+export function ProbeTidalCapabilities(arg1) {
+  return window['go']['main']['App']['ProbeTidalCapabilities'](arg1);
+}
+
 export function PublishSet(arg1) {
   return window['go']['main']['App']['PublishSet'](arg1);
+}
+
+export function PublishTidalPreviews(arg1) {
+  return window['go']['main']['App']['PublishTidalPreviews'](arg1);
+}
+
+export function SaveTidalSet(arg1) {
+  return window['go']['main']['App']['SaveTidalSet'](arg1);
 }
 
 export function SaveTransitionFeedback(arg1) {
@@ -44,6 +60,14 @@ export function SpotifyPlaylists() {
 
 export function SyncSpotifyPlaylists(arg1) {
   return window['go']['main']['App']['SyncSpotifyPlaylists'](arg1);
+}
+
+export function TidalSavedSets() {
+  return window['go']['main']['App']['TidalSavedSets']();
+}
+
+export function TidalStatus() {
+  return window['go']['main']['App']['TidalStatus']();
 }
 
 export function TrackWaveform(arg1) {
