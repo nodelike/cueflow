@@ -1,4 +1,4 @@
-import { Dices, Sparkles, Waves } from 'lucide-react'
+import { Dices, SlidersHorizontal, Sparkles, Waves } from 'lucide-react'
 import type { GenerateRequest, Section, SourcePlaylist, Track } from '../../types'
 import { Popover } from '../common/Popover'
 import { Select } from '../common/Select'
@@ -24,7 +24,7 @@ const arcs = [
 ]
 const lengths = [15, 30, 45, 60, 75, 90, 120].map((minutes) => ({ value: String(minutes), label: `${minutes} min` }))
 
-/** The whole brief on one strip: the frequent knobs inline, the rest one click away. */
+/** Search on the left, the recipe on the right, generate at the end of it. */
 export function BriefBar({ value, tracks, crates, eligibleCount, busy, onChange, onGenerate, onNavigate }: Props) {
   function update<K extends keyof GenerateRequest>(key: K, next: GenerateRequest[K]) {
     onChange({ ...value, [key]: next })
@@ -41,63 +41,57 @@ export function BriefBar({ value, tracks, crates, eligibleCount, busy, onChange,
       ? crates.find((crate) => crate.id === value.sourcePlaylistIds[0])?.name ?? '1 crate'
       : `${value.sourcePlaylistIds.length} crates`
 
+  const grooveLabel = value.allowedGrooves.length === 0
+    ? 'Any groove'
+    : value.allowedGrooves.length === 1
+      ? value.allowedGrooves[0]
+      : `${value.allowedGrooves.length} grooves`
+
   return (
     <div className="brief-bar" aria-label="Set brief">
       <PinSearch tracks={tracks} pinnedIDs={value.requiredTrackIds} onPin={(id) => toggleList('requiredTrackIds', id)} />
 
-      <div className="bar-field">
-        <span className="eyebrow">Length</span>
+      <div className="brief-controls">
         <Select
           value={String(value.durationMinutes)}
           options={lengths}
           ariaLabel="Set length"
           onChange={(next) => update('durationMinutes', Number(next))}
         />
-      </div>
 
-      <div className="bar-field">
-        <span className="eyebrow">Arc</span>
         <Select value={value.arc} options={arcs} ariaLabel="Energy arc" onChange={(next) => update('arc', next)} />
-      </div>
 
-      <Popover label={<span className="truncate">{crateLabel}</span>} ariaLabel="Choose crates" width={264}>
-        <div className="popover-head">
-          <span className="eyebrow">Crates</span>
-          <small>{eligibleCount} tracks ready</small>
-        </div>
-        {crates.length === 0 ? (
-          <button type="button" className="brief-hint" onClick={() => onNavigate('sources')}>
-            <Waves size={15} />
-            <span>Sync a playlist in Sources to fill the master library.</span>
-          </button>
-        ) : (
-          <div className="popover-list">
-            <button type="button" className="chip" aria-pressed={value.sourcePlaylistIds.length === 0} onClick={() => update('sourcePlaylistIds', [])}>
-              Whole library
-            </button>
-            {crates.map((crate) => (
-              <button
-                type="button"
-                key={crate.id}
-                className="chip"
-                aria-pressed={value.sourcePlaylistIds.includes(crate.id)}
-                onClick={() => toggleList('sourcePlaylistIds', crate.id)}
-              >
-                {crate.name}
-              </button>
-            ))}
+        <Popover label={<span className="truncate">{crateLabel}</span>} ariaLabel="Choose crates" align="end" width={264}>
+          <div className="popover-head">
+            <span className="eyebrow">Crates</span>
+            <small>{eligibleCount} tracks ready</small>
           </div>
-        )}
-      </Popover>
+          {crates.length === 0 ? (
+            <button type="button" className="brief-hint" onClick={() => onNavigate('sources')}>
+              <Waves size={15} />
+              <span>Sync a playlist in Sources to fill the master library.</span>
+            </button>
+          ) : (
+            <div className="popover-list">
+              <button type="button" className="chip" aria-pressed={value.sourcePlaylistIds.length === 0} onClick={() => update('sourcePlaylistIds', [])}>
+                Whole library
+              </button>
+              {crates.map((crate) => (
+                <button
+                  type="button"
+                  key={crate.id}
+                  className="chip"
+                  aria-pressed={value.sourcePlaylistIds.includes(crate.id)}
+                  onClick={() => toggleList('sourcePlaylistIds', crate.id)}
+                >
+                  {crate.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </Popover>
 
-      <Popover label="Tune" ariaLabel="Tune the brief" width={320}>
-        <div className="popover-head"><span className="eyebrow">Brief</span></div>
-        <label className="field">
-          <span>Name</span>
-          <input value={value.name} onChange={(event) => update('name', event.target.value)} />
-        </label>
-
-        <div className="popover-block">
+        <Popover label={<span className="truncate">{grooveLabel}</span>} ariaLabel="Choose grooves" align="end" width={248}>
           <div className="popover-head">
             <span className="eyebrow">Groove</span>
             <small>{value.allowedGrooves.length ? `${value.allowedGrooves.length} selected` : 'Any'}</small>
@@ -116,58 +110,73 @@ export function BriefBar({ value, tracks, crates, eligibleCount, busy, onChange,
               </button>
             ))}
           </div>
-        </div>
+        </Popover>
 
-        <div className="popover-block field-row">
+        <Popover
+          className="btn icon"
+          label={<SlidersHorizontal size={15} />}
+          ariaLabel="Tune the brief"
+          align="end"
+          width={320}
+          caret={false}
+        >
+          <div className="popover-head"><span className="eyebrow">Brief</span></div>
           <label className="field">
-            <span>Start BPM</span>
-            <input type="number" value={value.startBpm} onChange={(event) => update('startBpm', Number(event.target.value))} />
+            <span>Name</span>
+            <input value={value.name} onChange={(event) => update('name', event.target.value)} />
           </label>
-          <label className="field">
-            <span>End BPM</span>
-            <input type="number" value={value.endBpm} onChange={(event) => update('endBpm', Number(event.target.value))} />
-          </label>
-        </div>
 
-        <div className="popover-block">
-          <div className="popover-head"><span className="eyebrow">Variations</span></div>
-          <div className="segmented wide" role="group" aria-label="Variation count">
-            {[2, 3, 4].map((count) => (
-              <button
-                type="button"
-                key={count}
-                className={value.variationCount === count ? 'active' : ''}
-                aria-pressed={value.variationCount === count}
-                onClick={() => update('variationCount', count)}
-              >
-                {count}
+          <div className="popover-block field-row">
+            <label className="field">
+              <span>Start BPM</span>
+              <input type="number" value={value.startBpm} onChange={(event) => update('startBpm', Number(event.target.value))} />
+            </label>
+            <label className="field">
+              <span>End BPM</span>
+              <input type="number" value={value.endBpm} onChange={(event) => update('endBpm', Number(event.target.value))} />
+            </label>
+          </div>
+
+          <div className="popover-block">
+            <div className="popover-head"><span className="eyebrow">Variations</span></div>
+            <div className="segmented wide" role="group" aria-label="Variation count">
+              {[2, 3, 4].map((count) => (
+                <button
+                  type="button"
+                  key={count}
+                  className={value.variationCount === count ? 'active' : ''}
+                  aria-pressed={value.variationCount === count}
+                  onClick={() => update('variationCount', count)}
+                >
+                  {count}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="popover-block">
+            <label className="range">
+              <span>Harmonic discipline <b>{Math.round(value.harmonicStrictness * 100)}%</b></span>
+              <input type="range" min="0" max="1" step="0.01" value={value.harmonicStrictness} onChange={(event) => update('harmonicStrictness', Number(event.target.value))} />
+            </label>
+            <label className="range">
+              <span>Surprise <b>{Math.round(value.exploration * 100)}%</b></span>
+              <input type="range" min="0" max="1" step="0.01" value={value.exploration} onChange={(event) => update('exploration', Number(event.target.value))} />
+            </label>
+            <div className="seed-control">
+              <span>Seed <b className="num">{value.seed}</b></span>
+              <button type="button" className="btn sm" onClick={() => update('seed', Math.floor(Math.random() * 99999))}>
+                <Dices size={14} /> Reroll
               </button>
-            ))}
+            </div>
           </div>
-        </div>
+        </Popover>
 
-        <div className="popover-block">
-          <label className="range">
-            <span>Harmonic discipline <b>{Math.round(value.harmonicStrictness * 100)}%</b></span>
-            <input type="range" min="0" max="1" step="0.01" value={value.harmonicStrictness} onChange={(event) => update('harmonicStrictness', Number(event.target.value))} />
-          </label>
-          <label className="range">
-            <span>Surprise <b>{Math.round(value.exploration * 100)}%</b></span>
-            <input type="range" min="0" max="1" step="0.01" value={value.exploration} onChange={(event) => update('exploration', Number(event.target.value))} />
-          </label>
-          <div className="seed-control">
-            <span>Seed <b className="num">{value.seed}</b></span>
-            <button type="button" className="btn sm" onClick={() => update('seed', Math.floor(Math.random() * 99999))}>
-              <Dices size={14} /> Reroll
-            </button>
-          </div>
-        </div>
-      </Popover>
-
-      <button type="button" className="btn primary generate" onClick={onGenerate} disabled={busy}>
-        {busy ? <span className="spinner" /> : <Sparkles size={15} />}
-        {busy ? 'Building…' : 'Generate'}
-      </button>
+        <button type="button" className="btn primary generate" onClick={onGenerate} disabled={busy}>
+          {busy ? <span className="spinner" /> : <Sparkles size={15} />}
+          {busy ? 'Building…' : 'Generate'}
+        </button>
+      </div>
     </div>
   )
 }

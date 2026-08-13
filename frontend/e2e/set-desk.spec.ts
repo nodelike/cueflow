@@ -150,7 +150,7 @@ test('keeps the desk on one screen with isolated, readable panels', async ({ pag
   const readability = await page.evaluate(() => {
     const size = (selector: string) => Number.parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize)
     return {
-      control: size('.bar-field .select-trigger'),
+      control: size('.brief-controls .select-trigger'),
       trackTitle: size('.mix-row strong'),
       trackArtist: size('.mix-row small'),
       inspectorTitle: size('.inspector h2'),

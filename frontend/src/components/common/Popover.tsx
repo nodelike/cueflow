@@ -7,11 +7,12 @@ type Props = {
   className?: string
   align?: 'start' | 'end'
   width?: number
+  caret?: boolean
   children: ReactNode
 }
 
 /** A control that keeps its rarely-touched detail one click away. */
-export function Popover({ label, ariaLabel, className = '', align = 'start', width = 280, children }: Props) {
+export function Popover({ label, ariaLabel, className = '', align = 'start', width = 280, caret = true, children }: Props) {
   const [open, setOpen] = useState(false)
   const holder = useRef<HTMLDivElement>(null)
 
@@ -42,7 +43,7 @@ export function Popover({ label, ariaLabel, className = '', align = 'start', wid
         onClick={() => setOpen((current) => !current)}
       >
         {label}
-        <ChevronDown size={13} className="popover-caret" />
+        {caret && <ChevronDown size={13} className="popover-caret" />}
       </button>
       {open && (
         <div className={`popover ${align}`} style={{ width }} role="dialog" aria-label={ariaLabel}>
