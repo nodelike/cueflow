@@ -13,7 +13,10 @@ import (
 	"time"
 )
 
-const defaultScopes = "playlists.read playlists.write search.read"
+// Request only the narrow public scope needed for Cueflow's disposable output
+// playlists. TIDAL rejects authorization when an app asks for scopes that have
+// not been enabled for that developer application.
+const defaultScopes = "playlists.write"
 
 type OAuth struct {
 	ClientID    string
