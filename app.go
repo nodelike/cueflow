@@ -9,6 +9,7 @@ import (
 	"cueflow/internal/service"
 	"cueflow/internal/spotify"
 	"cueflow/internal/store"
+	"cueflow/internal/tidal"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -43,7 +44,9 @@ func (a *App) startup(ctx context.Context) {
 	a.store = repository
 	cfg := config.Load()
 	spotifyClient := &spotify.Client{ClientID: cfg.SpotifyClientID, OAuth: spotify.OAuth{ClientID: cfg.SpotifyClientID, RedirectURI: cfg.SpotifyRedirectURI}, Store: spotify.KeyringStore{}}
-	a.service = service.New(repository).WithSpotify(spotifyClient)
+	tidalOAuth := tidal.OAuth{ClientID: cfg.TidalClientID, RedirectURI: cfg.TidalRedirectURI}
+	tidalClient := &tidal.Client{ClientID: cfg.TidalClientID, OAuth: tidalOAuth, Store: tidal.KeyringStore{}}
+	a.service = service.New(repository).WithSpotify(spotifyClient).WithTidal(tidalClient)
 }
 
 func (a *App) shutdown(ctx context.Context) {
@@ -111,6 +114,32 @@ func (a *App) ConnectSpotify() error {
 		runtime.BrowserOpenURL(a.ctx, authorizationURL)
 		return nil
 	})
+}
+
+func (a *App) TidalStatus() tidal.Status {
+	if a.service == nil {
+		return tidal.Status{GrantedScopes: []string{}}
+	}
+	return a.service.TidalStatus()
+}
+
+func (a *App) ConnectTidal() error {
+	if a.service == nil {
+		return fmt.Errorf("Cueflow is not ready")
+	}
+	cfg := config.Load()
+	oauth := tidal.OAuth{ClientID: cfg.TidalClientID, RedirectURI: cfg.TidalRedirectURI}
+	return tidal.AuthorizeInteractive(a.ctx, oauth, tidal.KeyringStore{}, func(authorizationURL string) error {
+		runtime.BrowserOpenURL(a.ctx, authorizationURL)
+		return nil
+	})
+}
+
+func (a *App) ProbeTidalCapabilities(trackID string) (tidal.CapabilityReport, error) {
+	if a.service == nil {
+		return tidal.CapabilityReport{}, fmt.Errorf("Cueflow is not ready")
+	}
+	return a.service.ProbeTidalCapabilities(a.ctx, trackID)
 }
 
 func (a *App) PublishSet(draftID string) (spotify.Playlist, error) {

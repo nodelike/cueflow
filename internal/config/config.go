@@ -7,6 +7,8 @@ type Config struct {
 	APIAddr            string
 	SpotifyClientID    string
 	SpotifyRedirectURI string
+	TidalClientID      string
+	TidalRedirectURI   string
 }
 
 func Load() Config {
@@ -30,5 +32,14 @@ func Load() Config {
 	if redirectURI == "" {
 		redirectURI = "http://127.0.0.1:3000/api/spotify/callback"
 	}
-	return Config{DatabaseURL: databaseURL, APIAddr: addr, SpotifyClientID: clientID, SpotifyRedirectURI: redirectURI}
+	tidalClientID := os.Getenv("CUEFLOW_TIDAL_CLIENT_ID")
+	tidalRedirectURI := os.Getenv("CUEFLOW_TIDAL_REDIRECT_URI")
+	if tidalRedirectURI == "" {
+		tidalRedirectURI = "http://127.0.0.1:3000/api/source/tidal/callback"
+	}
+	return Config{
+		DatabaseURL: databaseURL, APIAddr: addr,
+		SpotifyClientID: clientID, SpotifyRedirectURI: redirectURI,
+		TidalClientID: tidalClientID, TidalRedirectURI: tidalRedirectURI,
+	}
 }

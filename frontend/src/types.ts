@@ -180,6 +180,9 @@ declare global {
           SpotifyPlaylists: () => Promise<SpotifyPlaylist[]>
           SyncSpotifyPlaylists: (playlistIds: string[]) => Promise<Bootstrap>
           ConnectSpotify: () => Promise<void>
+          TidalStatus: () => Promise<TidalStatus>
+          ConnectTidal: () => Promise<void>
+          ProbeTidalCapabilities: (trackId: string) => Promise<TidalCapabilityReport>
           PublishSet: (draftId: string) => Promise<PublishedPlaylist>
           NeedsReview: () => Promise<Track[]>
           EnrichTrack: (input: TrackEnrichment) => Promise<void>
@@ -201,4 +204,19 @@ export type SpotifyPlaylist = {
   ImageURL: string
   TrackCount: number
   Synced: boolean
+}
+
+export type TidalStatus = {
+  configured: boolean
+  connected: boolean
+  grantedScopes: string[]
+}
+
+export type TidalCapabilityReport = TidalStatus & {
+  createPlaylist: boolean
+  readPlaylist: boolean
+  addPlaylistItem: boolean
+  deletePlaylist: boolean
+  probePlaylistId?: string
+  message: string
 }

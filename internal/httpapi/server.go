@@ -31,6 +31,8 @@ func New(svc *service.Service, logger *slog.Logger) http.Handler {
 	router.Get("/api/spotify/status", server.spotifyStatus)
 	router.Get("/api/spotify/playlists", server.spotifyPlaylists)
 	router.Post("/api/spotify/playlists/sync", server.syncSpotifyPlaylists)
+	router.Get("/api/tidal/status", server.tidalStatus)
+	router.Post("/api/tidal/capabilities/probe", server.probeTidalCapabilities)
 	router.Post("/api/sets/{id}/publish", server.publish)
 	router.Put("/api/transitions/{from}/to/{to}/feedback", server.saveTransitionFeedback)
 	router.Get("/api/research/queue", server.researchQueue)
@@ -123,6 +125,28 @@ func (s *Server) trackWaveform(writer http.ResponseWriter, request *http.Request
 
 func (s *Server) spotifyStatus(writer http.ResponseWriter, request *http.Request) {
 	writeJSON(writer, http.StatusOK, map[string]bool{"connected": s.service.SpotifyConnected()})
+}
+
+func (s *Server) tidalStatus(writer http.ResponseWriter, request *http.Request) {
+	writeJSON(writer, http.StatusOK, s.service.TidalStatus())
+}
+
+func (s *Server) probeTidalCapabilities(writer http.ResponseWriter, request *http.Request) {
+	var input struct {
+		TrackID string `json:"trackId"`
+	}
+	decoder := json.NewDecoder(http.MaxBytesReader(writer, request.Body, 1<<20))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		writeError(writer, http.StatusBadRequest, err)
+		return
+	}
+	report, err := s.service.ProbeTidalCapabilities(request.Context(), input.TrackID)
+	if err != nil {
+		writeJSON(writer, http.StatusUnprocessableEntity, map[string]any{"error": err.Error(), "report": report})
+		return
+	}
+	writeJSON(writer, http.StatusOK, report)
 }
 
 func (s *Server) publish(writer http.ResponseWriter, request *http.Request) {

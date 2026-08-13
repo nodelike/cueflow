@@ -14,6 +14,7 @@ import (
 	"cueflow/internal/service"
 	"cueflow/internal/spotify"
 	"cueflow/internal/store"
+	"cueflow/internal/tidal"
 )
 
 func main() {
@@ -34,9 +35,11 @@ func main() {
 	}
 
 	spotifyClient := &spotify.Client{ClientID: cfg.SpotifyClientID, OAuth: spotify.OAuth{ClientID: cfg.SpotifyClientID, RedirectURI: cfg.SpotifyRedirectURI}, Store: spotify.KeyringStore{}}
+	tidalOAuth := tidal.OAuth{ClientID: cfg.TidalClientID, RedirectURI: cfg.TidalRedirectURI}
+	tidalClient := &tidal.Client{ClientID: cfg.TidalClientID, OAuth: tidalOAuth, Store: tidal.KeyringStore{}}
 	httpServer := &http.Server{
 		Addr:              cfg.APIAddr,
-		Handler:           httpapi.New(service.New(repository).WithSpotify(spotifyClient), logger),
+		Handler:           httpapi.New(service.New(repository).WithSpotify(spotifyClient).WithTidal(tidalClient), logger),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	go func() {

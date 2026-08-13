@@ -1,4 +1,4 @@
-import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, SpotifyPlaylist, Track, TrackEnrichment, TrackWaveform, TransitionFeedback, TransitionVerdict } from './types'
+import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, SpotifyPlaylist, TidalCapabilityReport, TidalStatus, Track, TrackEnrichment, TrackWaveform, TransitionFeedback, TransitionVerdict } from './types'
 
 const API_ROOT = import.meta.env.VITE_CUEFLOW_API_URL ?? 'http://127.0.0.1:8787'
 
@@ -40,6 +40,25 @@ export async function spotifyConnected(): Promise<boolean> {
 export async function connectSpotify(): Promise<void> {
   if (desktop()) return desktop()!.ConnectSpotify()
   throw new Error('Spotify connection is available in the Cueflow desktop app')
+}
+
+export async function tidalStatus(): Promise<TidalStatus> {
+  if (desktop()) return desktop()!.TidalStatus()
+  return json<TidalStatus>(await fetch(`${API_ROOT}/api/tidal/status`))
+}
+
+export async function connectTidal(): Promise<void> {
+  if (desktop()) return desktop()!.ConnectTidal()
+  throw new Error('TIDAL connection is available in the Cueflow desktop app')
+}
+
+export async function probeTidalCapabilities(trackId = ''): Promise<TidalCapabilityReport> {
+  if (desktop()) return desktop()!.ProbeTidalCapabilities(trackId)
+  return json<TidalCapabilityReport>(await fetch(`${API_ROOT}/api/tidal/capabilities/probe`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ trackId }),
+  }))
 }
 
 export async function spotifyPlaylists(): Promise<SpotifyPlaylist[]> {

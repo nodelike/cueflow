@@ -1,12 +1,12 @@
 import { AlertCircle } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { bootstrap, connectSpotify, enrichTrack, generateSets, needsReview, publishSet, saveTransitionFeedback, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists } from './api'
+import { bootstrap, connectSpotify, connectTidal, enrichTrack, generateSets, needsReview, probeTidalCapabilities, publishSet, saveTransitionFeedback, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists, tidalStatus } from './api'
 import { Sidebar } from './components/shell/Sidebar'
 import { Toasts, type Toast } from './components/shell/Toasts'
 import { transitionKey } from './components/studio/MixSheet'
 import { getSavedRequiredTrackIDs, getSavedSection, getSavedSourcePlaylistIDs, saveRequiredTrackIDs, saveSection, saveSourcePlaylistIDs } from './lib/preferences'
 import { getInitialTheme, saveTheme, type Theme } from './lib/theme'
-import type { Bootstrap, GenerateRequest, Section, SetDraft, SpotifyPlaylist, Track, TrackEnrichment, TransitionVerdict } from './types'
+import type { Bootstrap, GenerateRequest, Section, SetDraft, SpotifyPlaylist, TidalStatus, Track, TrackEnrichment, TransitionVerdict } from './types'
 import { LibraryView } from './views/LibraryView'
 import { ResearchView } from './views/ResearchView'
 import { SourcesView } from './views/SourcesView'
@@ -36,6 +36,7 @@ function App() {
   const [error, setError] = useState('')
   const [toasts, setToasts] = useState<Toast[]>([])
   const [spotifyReady, setSpotifyReady] = useState(false)
+  const [tidal, setTidal] = useState<TidalStatus>({ configured: false, connected: false, grantedScopes: [] })
   const [researchQueue, setResearchQueue] = useState<Track[]>([])
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([])
   const [syncing, setSyncing] = useState<string[]>([])
@@ -62,11 +63,12 @@ function App() {
 
   async function load() {
     try {
-      const [result, connected, queue] = await Promise.all([bootstrap(), spotifyConnected(), needsReview()])
+      const [result, connected, tidalConnection, queue] = await Promise.all([bootstrap(), spotifyConnected(), tidalStatus(), needsReview()])
       if (result.error) throw new Error(result.error)
       setData(result)
       setDrafts(result.drafts)
       setSpotifyReady(connected)
+      setTidal(tidalConnection)
       setResearchQueue(queue)
       setError('')
       if (connected) setPlaylists(await spotifyPlaylists())
@@ -128,6 +130,34 @@ function App() {
       setSpotifyReady(true)
       setPlaylists(await spotifyPlaylists())
       notify('Spotify connected')
+    } catch (caught) {
+      report(caught)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function connectToTidal() {
+    setBusy(true)
+    setError('')
+    try {
+      await connectTidal()
+      const connection = await tidalStatus()
+      setTidal(connection)
+      notify('TIDAL connected')
+    } catch (caught) {
+      report(caught)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function probeTidal() {
+    setBusy(true)
+    setError('')
+    try {
+      const report = await probeTidalCapabilities()
+      notify(report.message)
     } catch (caught) {
       report(caught)
     } finally {
@@ -244,10 +274,13 @@ function App() {
           crates={crates}
           tracks={tracks}
           spotifyReady={spotifyReady}
+          tidal={tidal}
           busy={busy}
           syncing={syncing}
           onSync={(ids) => void sync(ids)}
           onConnect={() => void connect()}
+          onConnectTidal={() => void connectToTidal()}
+          onProbeTidal={() => void probeTidal()}
         />
       )}
       {section === 'research' && <ResearchView tracks={researchQueue} busy={busy} onSave={saveEnrichment} />}

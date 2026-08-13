@@ -2,7 +2,7 @@ import { Check, Disc3, Library, Link2, RefreshCw, Search, Sparkles } from 'lucid
 import { useMemo, useState } from 'react'
 import { formatSince, plural } from '../lib/format'
 import { matches } from '../lib/search'
-import type { SourcePlaylist, SpotifyPlaylist, Track } from '../types'
+import type { SourcePlaylist, SpotifyPlaylist, TidalStatus, Track } from '../types'
 import { SectionHeader } from '../components/shell/SectionHeader'
 
 type Props = {
@@ -10,16 +10,19 @@ type Props = {
   crates: SourcePlaylist[]
   tracks: Track[]
   spotifyReady: boolean
+  tidal: TidalStatus
   busy: boolean
   syncing: string[]
   onSync: (playlistIDs: string[]) => void
   onConnect: () => void
+  onConnectTidal: () => void
+  onProbeTidal: () => void
 }
 
 const publishedPrefix = 'Set Lab —'
 
 /** Platform crates and their sync state against the master library. */
-export function SourcesView({ playlists, crates, tracks, spotifyReady, busy, syncing, onSync, onConnect }: Props) {
+export function SourcesView({ playlists, crates, tracks, spotifyReady, tidal, busy, syncing, onSync, onConnect, onConnectTidal, onProbeTidal }: Props) {
   const [query, setQuery] = useState('')
 
   const inLibrary = useMemo(() => {
@@ -82,13 +85,19 @@ export function SourcesView({ playlists, crates, tracks, spotifyReady, busy, syn
               : <button type="button" className="btn primary" disabled={busy} onClick={onConnect}><Link2 size={14} /> Connect</button>}
           </article>
 
-          <article className="platform disabled">
+          <article className={`platform${tidal.connected ? ' connected' : ''}`}>
             <div className="platform-mark tidal"><Sparkles size={19} /></div>
             <div className="platform-body">
-              <h2>Tidal</h2>
-              <p>Not supported yet. Cueflow syncs Spotify crates today.</p>
+              <h2>TIDAL</h2>
+              <p>{!tidal.configured
+                ? 'Add CUEFLOW_TIDAL_CLIENT_ID and restart Cueflow.'
+                : tidal.connected
+                  ? 'Connected for disposable preview playlists. Verify writes before publishing.'
+                  : 'Connect to publish generated variations for immediate testing in djay Pro.'}</p>
             </div>
-            <span className="badge">Planned</span>
+            {tidal.connected
+              ? <button type="button" className="btn" disabled={busy} onClick={onProbeTidal}><Check size={14} /> Verify access</button>
+              : <button type="button" className="btn primary" disabled={busy || !tidal.configured} onClick={onConnectTidal}><Link2 size={14} /> Connect</button>}
           </article>
         </div>
 

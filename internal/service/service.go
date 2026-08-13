@@ -10,12 +10,14 @@ import (
 	"cueflow/internal/generator"
 	"cueflow/internal/spotify"
 	"cueflow/internal/store"
+	"cueflow/internal/tidal"
 )
 
 type Service struct {
 	store     *store.Postgres
 	generator *generator.Generator
 	spotify   *spotify.Client
+	tidal     *tidal.Client
 }
 
 func New(repository *store.Postgres) *Service {
@@ -24,7 +26,23 @@ func New(repository *store.Postgres) *Service {
 
 func (s *Service) WithSpotify(client *spotify.Client) *Service { s.spotify = client; return s }
 
+func (s *Service) WithTidal(client *tidal.Client) *Service { s.tidal = client; return s }
+
 func (s *Service) SpotifyConnected() bool { return s.spotify != nil && s.spotify.Connected() }
+
+func (s *Service) TidalStatus() tidal.Status {
+	if s.tidal == nil {
+		return tidal.Status{GrantedScopes: []string{}}
+	}
+	return s.tidal.Status()
+}
+
+func (s *Service) ProbeTidalCapabilities(ctx context.Context, trackID string) (tidal.CapabilityReport, error) {
+	if s.tidal == nil {
+		return tidal.CapabilityReport{}, fmt.Errorf("TIDAL is not configured")
+	}
+	return s.tidal.ProbeCapabilities(ctx, trackID)
+}
 
 func (s *Service) SpotifyPlaylists(ctx context.Context) ([]spotify.Playlist, error) {
 	if s.spotify == nil || !s.spotify.Connected() {
