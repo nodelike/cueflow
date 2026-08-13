@@ -114,6 +114,10 @@ func (s *Service) Bootstrap(ctx context.Context) domain.Bootstrap {
 	if err != nil {
 		return domain.Bootstrap{Error: err.Error()}
 	}
+	syncedPlaylists, err := s.store.ListSyncedPlaylists(ctx)
+	if err != nil {
+		return domain.Bootstrap{Error: err.Error()}
+	}
 	catalog := make(map[string]domain.Track, len(tracks))
 	for _, track := range tracks {
 		catalog[track.ID] = track
@@ -136,6 +140,7 @@ func (s *Service) Bootstrap(ctx context.Context) domain.Bootstrap {
 		DraftCount:         draftCount,
 		Tracks:             tracks,
 		Drafts:             drafts,
+		SyncedPlaylists:    syncedPlaylists,
 		TransitionFeedback: transitionFeedback,
 	}
 }

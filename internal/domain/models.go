@@ -165,12 +165,25 @@ type SetDraft struct {
 	Tracks              []SetTrack `json:"tracks"`
 }
 
+// SourcePlaylist is a permanent playlist that has been synced read-only into
+// the master library. It is reported without a Spotify connection so the
+// desktop app can describe its own crates offline.
+type SourcePlaylist struct {
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	Kind       string    `json:"kind"`
+	ImageURL   string    `json:"imageUrl,omitempty"`
+	TrackCount int       `json:"trackCount"`
+	SyncedAt   time.Time `json:"syncedAt"`
+}
+
 type Bootstrap struct {
 	DatabaseReady      bool                 `json:"databaseReady"`
 	TrackCount         int                  `json:"trackCount"`
 	DraftCount         int                  `json:"draftCount"`
 	Tracks             []Track              `json:"tracks"`
 	Drafts             []SetDraft           `json:"drafts"`
+	SyncedPlaylists    []SourcePlaylist     `json:"syncedPlaylists"`
 	TransitionFeedback []TransitionFeedback `json:"transitionFeedback"`
 	Error              string               `json:"error,omitempty"`
 }

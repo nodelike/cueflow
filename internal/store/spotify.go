@@ -46,6 +46,25 @@ ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, kind=EXCLUDED.kind,
 	return tx.Commit(ctx)
 }
 
+// ListSyncedPlaylists reports the permanent crates already mirrored into the
+// master library, newest sync first, without contacting Spotify.
+func (p *Postgres) ListSyncedPlaylists(ctx context.Context) ([]domain.SourcePlaylist, error) {
+	rows, err := p.pool.Query(ctx, `SELECT id,name,kind,image_url,track_count,synced_at FROM spotify_playlists WHERE kind <> 'draft' ORDER BY synced_at DESC, name`)
+	if err != nil {
+		return nil, fmt.Errorf("list synced playlists: %w", err)
+	}
+	defer rows.Close()
+	playlists := []domain.SourcePlaylist{}
+	for rows.Next() {
+		var playlist domain.SourcePlaylist
+		if err := rows.Scan(&playlist.ID, &playlist.Name, &playlist.Kind, &playlist.ImageURL, &playlist.TrackCount, &playlist.SyncedAt); err != nil {
+			return nil, fmt.Errorf("scan synced playlist: %w", err)
+		}
+		playlists = append(playlists, playlist)
+	}
+	return playlists, rows.Err()
+}
+
 func (p *Postgres) SyncedPlaylists(ctx context.Context) (map[string]spotify.Playlist, error) {
 	rows, err := p.pool.Query(ctx, `SELECT id,name,kind,writable,image_url,track_count FROM spotify_playlists WHERE kind <> 'draft' ORDER BY name`)
 	if err != nil {
