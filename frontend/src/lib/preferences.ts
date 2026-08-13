@@ -31,17 +31,6 @@ export function saveSourcePlaylistIDs(ids: string[]) {
   window.localStorage.setItem(sourcePlaylistsKey, JSON.stringify(ids))
 }
 
-const briefKey = 'cueflow-brief-open'
-
-export function getSavedBriefOpen(): boolean {
-  if (typeof window === 'undefined') return true
-  return window.localStorage.getItem(briefKey) !== 'closed'
-}
-
-export function saveBriefOpen(open: boolean) {
-  window.localStorage.setItem(briefKey, open ? 'open' : 'closed')
-}
-
 const sections: Section[] = ['studio', 'library', 'sources', 'research']
 
 export function getSavedSection(): Section {

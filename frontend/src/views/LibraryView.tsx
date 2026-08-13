@@ -5,7 +5,7 @@ import { matches } from '../lib/search'
 import type { Section, SourcePlaylist, Track } from '../types'
 import { Artwork } from '../components/common/Artwork'
 import { CamelotKey } from '../components/common/CamelotKey'
-import { EnergyMeter } from '../components/common/EnergyMeter'
+import { LevelMeter } from '../components/common/LevelMeter'
 import { SectionHeader } from '../components/shell/SectionHeader'
 
 type Props = {
@@ -110,7 +110,7 @@ export function LibraryView({ tracks, crates, onNavigate }: Props) {
               <span>Track</span>
               <span>BPM</span>
               <span>Key</span>
-              <span>Energy</span>
+              <span>Level</span>
               <span>Groove</span>
               <span>Role</span>
               <span>Crate</span>
@@ -135,7 +135,7 @@ export function LibraryView({ tracks, crates, onNavigate }: Props) {
                   </span>
                   <span className="num">{formatBpm(track.bpm)}</span>
                   <CamelotKey value={track.camelot} />
-                  <span className="table-energy"><EnergyMeter value={track.energy} label={`${track.title} energy`} /></span>
+                  <span className="table-level"><LevelMeter value={track.energy} label={`${track.title} energy`} /></span>
                   <span className="truncate muted">{track.groove || '—'}</span>
                   <span className="truncate muted">{track.role || '—'}</span>
                   <span className="truncate muted">{track.sourcePlaylist}</span>

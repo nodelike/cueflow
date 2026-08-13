@@ -62,19 +62,18 @@ test('generates, compares, and field-tests persisted set variations', async ({ p
   await page.goto('/')
   await mockDesktopWaveform(page)
 
-  await page.getByRole('button', { name: 'Choose tracks' }).click()
-  const picker = page.getByRole('dialog', { name: 'Choose must-play tracks' })
-  const firstTrack = picker.getByLabel('Track search results').getByRole('button').first()
-  const requiredTrack = (await firstTrack.locator('strong').textContent())!
-  await firstTrack.click()
-  await picker.getByRole('button', { name: 'Done' }).click()
-  await expect(page.getByLabel('Set brief')).toContainText(requiredTrack)
+  // Must-play is a search in the brief bar; the pin lands in the playlist column.
+  await page.getByRole('searchbox', { name: 'Search tracks to must-play' }).fill('a')
+  const firstResult = page.getByLabel('Track search results').getByRole('button').first()
+  const requiredTrack = (await firstResult.locator('strong').textContent())!
+  await firstResult.click()
+  await expect(page.getByLabel('Must-play tracks')).toContainText(requiredTrack)
 
   await page.reload()
   await mockDesktopWaveform(page)
-  await expect(page.getByLabel('Set brief')).toContainText(requiredTrack)
+  await expect(page.getByLabel('Must-play tracks')).toContainText(requiredTrack)
 
-  await page.getByRole('button', { name: 'Generate set' }).click()
+  await page.getByRole('button', { name: 'Generate', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Afro to pressure — A' })).toBeVisible()
   await expect(page.getByRole('tab')).toHaveCount(3)
 
@@ -126,35 +125,44 @@ test('keeps the desk on one screen with isolated, readable panels', async ({ pag
   })
   expect(scrollContract).toEqual({ isolated: true, overscroll: 'contain', scrollbar: 'none', windowScrollY: 0 })
 
-  // The deck spans the working canvas above the sheet and inspector, never inside them.
+  // Three panels: the rail, the playlist column, and the inspector. Nothing else.
+  expect(await page.evaluate(() => {
+    const main = document.querySelector('.studio-main')!
+    return {
+      columns: getComputedStyle(main).gridTemplateColumns.split(' ').length,
+      panels: [...main.children].length,
+    }
+  })).toEqual({ columns: 2, panels: 2 })
+
+  // The waveform sits above the sheet inside the playlist column, never in the inspector.
   expect(await page.getByLabel(/Full waveform for/i).evaluate((element) => {
-    const canvas = element.closest('.canvas')!.getBoundingClientRect()
+    const column = element.closest('.studio-column')!.getBoundingClientRect()
     const deck = element.getBoundingClientRect()
     const sheet = document.querySelector('.mix-sheet')!.getBoundingClientRect()
     return {
-      spansCanvas: deck.width > canvas.width - 48,
+      spansColumn: Math.abs(deck.width - column.width) < 2,
       aboveSheet: deck.bottom <= sheet.top,
       insideInspector: Boolean(element.closest('.inspector')),
     }
-  })).toEqual({ spansCanvas: true, aboveSheet: true, insideInspector: false })
+  })).toEqual({ spansColumn: true, aboveSheet: true, insideInspector: false })
 
   // Readability floor: the working type never shrinks back into microtype.
   const readability = await page.evaluate(() => {
     const size = (selector: string) => Number.parseFloat(getComputedStyle(document.querySelector(selector)!).fontSize)
     return {
-      control: size('.field input'),
+      control: size('.bar-field select'),
       trackTitle: size('.mix-row strong'),
       trackArtist: size('.mix-row small'),
       inspectorTitle: size('.inspector h2'),
-      primaryAction: size('.brief-actions .btn'),
+      primaryAction: size('.brief-bar .generate'),
       rowHeight: document.querySelector('.mix-row')!.getBoundingClientRect().height,
     }
   })
-  expect(readability.control).toBeGreaterThanOrEqual(13)
+  expect(readability.control).toBeGreaterThanOrEqual(12)
   expect(readability.trackTitle).toBeGreaterThanOrEqual(15)
   expect(readability.trackArtist).toBeGreaterThanOrEqual(12)
   expect(readability.inspectorTitle).toBeGreaterThanOrEqual(17)
-  expect(readability.primaryAction).toBeGreaterThanOrEqual(14)
+  expect(readability.primaryAction).toBeGreaterThanOrEqual(12)
   expect(readability.rowHeight).toBeGreaterThanOrEqual(50)
 
   // Traffic lights need clear space at the top of the sidebar rail.

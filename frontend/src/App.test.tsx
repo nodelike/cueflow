@@ -13,6 +13,7 @@ const spotifyPlaylists = vi.fn()
 const syncSpotifyPlaylists = vi.fn()
 const trackWaveform = vi.fn()
 const saveTransitionFeedback = vi.fn()
+const tidalStatus = vi.fn()
 vi.mock('./api', () => ({
   bootstrap: () => bootstrap(),
   generateSets: (...args: unknown[]) => generateSets(...args),
@@ -21,6 +22,9 @@ vi.mock('./api', () => ({
   spotifyPlaylists: () => spotifyPlaylists(),
   syncSpotifyPlaylists: (...args: unknown[]) => syncSpotifyPlaylists(...args),
   connectSpotify: vi.fn(),
+  tidalStatus: () => tidalStatus(),
+  connectTidal: vi.fn(),
+  probeTidalCapabilities: vi.fn(),
   publishSet: vi.fn(),
   needsReview: () => needsReview(),
   enrichTrack: (...args: unknown[]) => enrichTrack(...args),
@@ -36,6 +40,7 @@ describe('Cueflow desk', () => {
     document.documentElement.dataset.theme = 'light'
     bootstrap.mockResolvedValue(bootstrapData); generateSets.mockResolvedValue([draft]); needsReview.mockResolvedValue([]); enrichTrack.mockResolvedValue(undefined)
     spotifyConnected.mockResolvedValue(false); spotifyPlaylists.mockResolvedValue([]); syncSpotifyPlaylists.mockResolvedValue(bootstrapData)
+    tidalStatus.mockResolvedValue({ configured: false, connected: false, grantedScopes: [] })
     trackWaveform.mockImplementation((trackID: string) => Promise.resolve({
       trackId: trackID,
       durationSeconds: draft.tracks.find((item) => item.track.id === trackID)?.track.durationSeconds ?? 300,
@@ -48,7 +53,9 @@ describe('Cueflow desk', () => {
   it('opens on the studio with the persisted set and its transition evidence', async () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Afro to pressure — A' })).toBeInTheDocument()
-    expect(screen.getByText('fit')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Set quality breakdown' }))
+    expect(within(screen.getByRole('dialog', { name: 'Set quality breakdown' })).getByText('Harmony')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
 
     const deck = screen.getByLabelText('Full waveform for Salt Horizon')
     expect(await within(deck).findByRole('img', { name: /Full-track peak and RMS waveform for Salt Horizon/i })).toBeInTheDocument()
@@ -87,37 +94,49 @@ describe('Cueflow desk', () => {
   it('submits the tunable set brief', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: 'Afro to pressure — A' })
-    await userEvent.click(screen.getByRole('button', { name: 'Generate set' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
     expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ arc: 'journey', durationMinutes: 60, variationCount: 3 }))
   })
 
   it('limits generation to the crates picked in the brief', async () => {
     render(<App />)
     await screen.findByRole('heading', { name: 'Afro to pressure — A' })
-    const brief = screen.getByLabelText('Set brief')
-    await userEvent.click(within(brief).getByRole('button', { name: 'Afro Vibezz' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Generate set' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Choose crates' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Afro Vibezz' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
     expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ sourcePlaylistIds: ['afro'] }))
     await waitFor(() => expect(window.localStorage.getItem('cueflow-source-playlist-ids')).toBe('["afro"]'))
   })
 
-  it('searches, requires, and restores must-play tracks after a restart', async () => {
+  it('pins a must-play track from the brief bar and restores it after a restart', async () => {
     const firstRun = render(<App />)
     await screen.findByRole('heading', { name: 'Afro to pressure — A' })
-    await userEvent.click(screen.getByRole('button', { name: 'Choose tracks' }))
-    const picker = screen.getByRole('dialog', { name: 'Choose must-play tracks' })
-    await userEvent.type(within(picker).getByRole('searchbox', { name: 'Search tracks' }), 'Clay')
-    await userEvent.click(within(picker).getByRole('button', { name: /Clay Drums/ }))
-    await userEvent.click(within(picker).getByRole('button', { name: 'Done' }))
-    expect(within(screen.getByLabelText('Set brief')).getByText('Clay Drums')).toBeInTheDocument()
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search tracks to must-play' }), 'Clay')
+    await userEvent.click(within(screen.getByLabelText('Track search results')).getByRole('button', { name: /Clay Drums/ }))
+
+    const strip = screen.getByLabelText('Must-play tracks')
+    expect(within(strip).getByText('Clay Drums')).toBeInTheDocument()
     await waitFor(() => expect(window.localStorage.getItem('cueflow-required-track-ids')).toBe('["two"]'))
-    await userEvent.click(screen.getByRole('button', { name: 'Generate set' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Generate' }))
     expect(generateSets).toHaveBeenCalledWith(expect.objectContaining({ requiredTrackIds: ['two'] }))
 
     firstRun.unmount()
     render(<App />)
     await screen.findByRole('heading', { name: 'Afro to pressure — A' })
-    expect(within(screen.getByLabelText('Set brief')).getByText('Clay Drums')).toBeInTheDocument()
+    expect(within(await screen.findByLabelText('Must-play tracks')).getByText('Clay Drums')).toBeInTheDocument()
+  })
+
+  it('pins and unpins a track from the mix sheet row itself', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Afro to pressure — A' })
+    const sheet = screen.getByLabelText('Set track list')
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Must-play Clay Drums' }))
+    await waitFor(() => expect(window.localStorage.getItem('cueflow-required-track-ids')).toBe('["two"]'))
+    expect(within(screen.getByLabelText('Must-play tracks')).getByText('Clay Drums')).toBeInTheDocument()
+
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Unpin Clay Drums' }))
+    await waitFor(() => expect(window.localStorage.getItem('cueflow-required-track-ids')).toBe('[]'))
+    expect(screen.queryByLabelText('Must-play tracks')).not.toBeInTheDocument()
   })
 
   it('matches track search without caring about case, punctuation, accents, or spacing', async () => {
@@ -125,16 +144,14 @@ describe('Cueflow desk', () => {
     bootstrap.mockResolvedValue({ ...bootstrapData, tracks: [...bootstrapData.tracks, looseMatchTrack] })
     render(<App />)
     await screen.findByRole('heading', { name: 'Afro to pressure — A' })
-    await userEvent.click(screen.getByRole('button', { name: 'Choose tracks' }))
-    const picker = screen.getByRole('dialog', { name: 'Choose must-play tracks' })
-    const search = within(picker).getByRole('searchbox', { name: 'Search tracks' })
+    const search = screen.getByRole('searchbox', { name: 'Search tracks to must-play' })
 
     await userEvent.type(search, 'dont')
-    expect(within(picker).getByRole('button', { name: /DON’T Stop/ })).toBeInTheDocument()
+    expect(within(screen.getByLabelText('Track search results')).getByRole('button', { name: /DON’T Stop/ })).toBeInTheDocument()
 
     await userEvent.clear(search)
     await userEvent.type(search, 'CAFE NOIR')
-    expect(within(picker).getByRole('button', { name: /DON’T Stop/ })).toBeInTheDocument()
+    expect(within(screen.getByLabelText('Track search results')).getByRole('button', { name: /DON’T Stop/ })).toBeInTheDocument()
   })
 
   it('browses the master library, filters it, and explains one track', async () => {
@@ -166,7 +183,7 @@ describe('Cueflow desk', () => {
     await openSection(/^Sources/)
 
     expect(screen.getByRole('heading', { name: 'Spotify' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Tidal' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'TIDAL' })).toBeInTheDocument()
     expect(screen.getByText('In the master library')).toBeInTheDocument()
     expect(screen.getByText('Available on Spotify')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Re-sync Afro Vibezz' })).toBeInTheDocument()
@@ -210,11 +227,12 @@ describe('Cueflow desk', () => {
     expect(screen.getByRole('button', { name: /Save reviewed features/ })).toBeInTheDocument()
   })
 
-  it('explains when the selected track has no full-track waveform analysis', async () => {
+  it('drops the waveform panel entirely when the recording has no analysis', async () => {
     trackWaveform.mockResolvedValue({ trackId: 'one', durationSeconds: 0, waveform: [] })
     render(<App />)
     await screen.findByRole('heading', { name: 'Afro to pressure — A' })
-    expect(await screen.findByText('Full recording not linked')).toBeInTheDocument()
-    expect(screen.getByText(/Import or link the complete audio file/i)).toBeInTheDocument()
+    await waitFor(() => expect(trackWaveform).toHaveBeenCalled())
+    expect(screen.queryByLabelText(/Full waveform for/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Set track list')).toBeInTheDocument()
   })
 })
