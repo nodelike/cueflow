@@ -1,6 +1,6 @@
 import { AlertCircle } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { bootstrap, connectSpotify, connectTidal, enrichTrack, generateSets, needsReview, probeTidalCapabilities, publishSet, saveTransitionFeedback, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists, tidalStatus } from './api'
+import { bootstrap, connectSpotify, connectTidal, enrichTrack, generateSets, needsReview, probeTidalCapabilities, publishSet, publishTidalPreviews, saveTransitionFeedback, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists, tidalStatus } from './api'
 import { Sidebar } from './components/shell/Sidebar'
 import { Toasts, type Toast } from './components/shell/Toasts'
 import { transitionKey } from './components/studio/MixSheet'
@@ -116,6 +116,21 @@ function App() {
       const playlist = await publishSet(draft.id)
       notify(`Published ${playlist.Name}`)
       if (spotifyReady) setPlaylists(await spotifyPlaylists())
+    } catch (caught) {
+      report(caught)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function previewInTidal() {
+    if (drafts.length === 0) return
+    setBusy(true)
+    setError('')
+    try {
+      const result = await publishTidalPreviews(drafts.map((draft) => draft.id))
+      const warning = result.warnings.length > 0 ? ` · ${result.warnings.length} cleanup warning` : ''
+      notify(`${result.playlists.length} TIDAL variations ready in djay Pro${warning}`)
     } catch (caught) {
       report(caught)
     } finally {
@@ -257,10 +272,12 @@ function App() {
           feedback={feedback}
           savingTransition={savingTransition}
           spotifyReady={spotifyReady}
+          tidalReady={tidal.connected}
           busy={busy}
           onRequestChange={setRequest}
           onGenerate={() => void generate()}
           onPublish={() => void publish()}
+          onPreviewTidal={() => void previewInTidal()}
           onSelectDraft={(index) => { setSelectedDraft(index); setSelectedPosition(1) }}
           onSelectPosition={setSelectedPosition}
           onFeedback={(fromTrackId, toTrackId, verdict) => void recordTransition(fromTrackId, toTrackId, verdict)}

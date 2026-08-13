@@ -1,4 +1,4 @@
-import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, SpotifyPlaylist, TidalCapabilityReport, TidalStatus, Track, TrackEnrichment, TrackWaveform, TransitionFeedback, TransitionVerdict } from './types'
+import type { Bootstrap, GenerateRequest, PublishedPlaylist, SetDraft, SpotifyPlaylist, TidalCapabilityReport, TidalPreviewBatch, TidalStatus, Track, TrackEnrichment, TrackWaveform, TransitionFeedback, TransitionVerdict } from './types'
 
 const API_ROOT = import.meta.env.VITE_CUEFLOW_API_URL ?? 'http://127.0.0.1:8787'
 
@@ -58,6 +58,15 @@ export async function probeTidalCapabilities(trackId = ''): Promise<TidalCapabil
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ trackId }),
+  }))
+}
+
+export async function publishTidalPreviews(draftIds: string[]): Promise<TidalPreviewBatch> {
+  if (desktop()) return desktop()!.PublishTidalPreviews(draftIds)
+  return json<TidalPreviewBatch>(await fetch(`${API_ROOT}/api/tidal/previews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ draftIds }),
   }))
 }
 

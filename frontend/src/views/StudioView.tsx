@@ -20,10 +20,12 @@ type Props = {
   feedback: Map<string, TransitionFeedback>
   savingTransition: string
   spotifyReady: boolean
+  tidalReady: boolean
   busy: boolean
   onRequestChange: (request: GenerateRequest) => void
   onGenerate: () => void
   onPublish: () => void
+  onPreviewTidal: () => void
   onSelectDraft: (index: number) => void
   onSelectPosition: (position: number) => void
   onFeedback: (fromTrackId: string, toTrackId: string, verdict: TransitionVerdict) => void
@@ -95,6 +97,9 @@ export function StudioView(props: Props) {
             </div>
             <button type="button" className="btn" disabled={!spotifyReady || busy} onClick={props.onPublish}>
               <Send size={14} /> Publish
+            </button>
+            <button type="button" className="btn primary" disabled={!props.tidalReady || busy} onClick={props.onPreviewTidal}>
+              <Sparkles size={14} /> Preview in djay
             </button>
           </>
         )}
