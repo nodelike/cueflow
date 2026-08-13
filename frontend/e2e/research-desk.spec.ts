@@ -29,7 +29,7 @@ test('reviews a synced track and clears it from the queue', async ({ page, reque
   await page.getByLabel('Provenance').fill('Manual structure review + https://example.test/track-evidence')
   await page.getByRole('button', { name: 'Save reviewed features' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Every synced track is reviewed.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Research queue clear' })).toBeVisible()
   const queue = await request.get('http://127.0.0.1:8787/api/research/queue')
   expect(await queue.json()).toEqual([])
 

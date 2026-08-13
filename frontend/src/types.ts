@@ -1,3 +1,6 @@
+/** Top-level workspaces. One job each, reachable with ⌘1–⌘4. */
+export type Section = 'studio' | 'library' | 'sources' | 'research'
+
 export type Track = {
   id: string
   spotifyId?: string
@@ -128,12 +131,23 @@ export type SetDraft = {
   tracks: SetTrack[]
 }
 
+/** A permanent playlist mirrored read-only into the master library. */
+export type SourcePlaylist = {
+  id: string
+  name: string
+  kind: string
+  imageUrl?: string
+  trackCount: number
+  syncedAt: string
+}
+
 export type Bootstrap = {
   databaseReady: boolean
   trackCount: number
   draftCount: number
   tracks: Track[]
   drafts: SetDraft[]
+  syncedPlaylists: SourcePlaylist[]
   transitionFeedback: TransitionFeedback[]
   error?: string
 }

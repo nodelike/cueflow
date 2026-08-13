@@ -9,6 +9,21 @@ Source crates are chosen from the connected user's Spotify playlists. Cueflow
 syncs the selected playlists read-only and never removes, reorders, or adds
 tracks in those permanent sources.
 
+## Workspaces
+
+The desktop app is organized into four sections, reachable from the sidebar or
+with `⌘1`–`⌘4`:
+
+- **Studio** — the set brief, generated variations, the mix sheet with every
+  blend between tracks, the full-track waveform deck, and the evidence
+  inspector. `⌘B` collapses the brief when the sheet needs the room.
+- **Library** — the master library that generation draws from: search, crate
+  and groove filters, measured facts, and per-track provenance.
+- **Sources** — connected platforms and every playlist they expose, each marked
+  synced or not synced, with a per-playlist sync into the master library.
+- **Research** — the queue of tracks whose BPM, key, feel, and role still need
+  human ears before they can enter generation.
+
 ## Stack
 
 - Go 1.26 domain engine and API
@@ -64,8 +79,9 @@ make spotify-auth
 make spotify-sync PLAYLIST_IDS='spotify_playlist_id another_playlist_id'
 ```
 
-The desktop app can list the connected account's playlists and sync selected
-source crates directly, so the CLI IDs are only needed for headless workflows.
+The desktop app's **Sources** section lists the connected account's playlists
+with their sync state and syncs selected source crates directly, so the CLI IDs
+are only needed for headless workflows.
 
 The packaged desktop app also has a **Connect Spotify** button. It opens the
 same PKCE consent flow and writes the resulting token directly to Keychain;

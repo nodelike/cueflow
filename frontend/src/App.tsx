@@ -1,17 +1,16 @@
-import { AlertCircle, ArrowDown, Check, Disc3, Link2, Moon, RefreshCw, Send, Sparkles, Sun, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { AlertCircle } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { bootstrap, connectSpotify, enrichTrack, generateSets, needsReview, publishSet, saveTransitionFeedback, spotifyConnected, spotifyPlaylists, syncSpotifyPlaylists } from './api'
-import { GeneratorPanel } from './components/GeneratorPanel'
-import { CamelotKey } from './components/CamelotKey'
-import { MixRibbon } from './components/MixRibbon'
-import { ResearchDesk } from './components/ResearchDesk'
-import { SetInspector } from './components/SetInspector'
-import { TrackArtwork } from './components/TrackArtwork'
-import { WaveformPanel } from './components/WaveformPanel'
-import { formatDate, formatDuration } from './lib/format'
-import { getSavedRequiredTrackIDs, getSavedSourcePlaylistIDs, saveRequiredTrackIDs, saveSourcePlaylistIDs } from './lib/preferences'
+import { Sidebar } from './components/shell/Sidebar'
+import { Toasts, type Toast } from './components/shell/Toasts'
+import { transitionKey } from './components/studio/MixSheet'
+import { getSavedRequiredTrackIDs, getSavedSection, getSavedSourcePlaylistIDs, saveRequiredTrackIDs, saveSection, saveSourcePlaylistIDs } from './lib/preferences'
 import { getInitialTheme, saveTheme, type Theme } from './lib/theme'
-import type { Bootstrap, GenerateRequest, SetDraft, SpotifyPlaylist, Track, TrackEnrichment, TransitionFeedback, TransitionVerdict } from './types'
+import type { Bootstrap, GenerateRequest, Section, SetDraft, SpotifyPlaylist, Track, TrackEnrichment, TransitionVerdict } from './types'
+import { LibraryView } from './views/LibraryView'
+import { ResearchView } from './views/ResearchView'
+import { SourcesView } from './views/SourcesView'
+import { StudioView } from './views/StudioView'
 import './App.css'
 
 const initialRequest: GenerateRequest = {
@@ -20,152 +19,248 @@ const initialRequest: GenerateRequest = {
   allowedGrooves: [], sourcePlaylistIds: [], requiredTrackIds: [], excludedTrackIds: [], seed: 9127,
 }
 
+const sectionOrder: Section[] = ['studio', 'library', 'sources', 'research']
+
 function App() {
   const [data, setData] = useState<Bootstrap>()
   const [drafts, setDrafts] = useState<SetDraft[]>([])
   const [selectedDraft, setSelectedDraft] = useState(0)
   const [selectedPosition, setSelectedPosition] = useState(1)
-  const [request, setRequest] = useState<GenerateRequest>(() => ({ ...initialRequest, requiredTrackIds: getSavedRequiredTrackIDs(), sourcePlaylistIds: getSavedSourcePlaylistIDs() }))
+  const [request, setRequest] = useState<GenerateRequest>(() => ({
+    ...initialRequest,
+    requiredTrackIds: getSavedRequiredTrackIDs(),
+    sourcePlaylistIds: getSavedSourcePlaylistIDs(),
+  }))
+  const [section, setSection] = useState<Section>(getSavedSection)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [toasts, setToasts] = useState<Toast[]>([])
   const [spotifyReady, setSpotifyReady] = useState(false)
-  const [published, setPublished] = useState('')
-  const [view, setView] = useState<'builder' | 'research'>('builder')
   const [researchQueue, setResearchQueue] = useState<Track[]>([])
   const [playlists, setPlaylists] = useState<SpotifyPlaylist[]>([])
-  const [theme, setTheme] = useState<Theme>(getInitialTheme)
-  const [transitionFeedback, setTransitionFeedback] = useState<TransitionFeedback[]>([])
+  const [syncing, setSyncing] = useState<string[]>([])
   const [savingTransition, setSavingTransition] = useState('')
+  const [theme, setTheme] = useState<Theme>(getInitialTheme)
+  const toastID = useRef(0)
 
   useEffect(() => { void load() }, [])
   useEffect(() => { saveTheme(theme) }, [theme])
+  useEffect(() => { saveSection(section) }, [section])
   useEffect(() => { saveRequiredTrackIDs(request.requiredTrackIds) }, [request.requiredTrackIds])
   useEffect(() => { saveSourcePlaylistIDs(request.sourcePlaylistIds) }, [request.sourcePlaylistIds])
+
+  const notify = useCallback((tone: Toast['tone'], message: string) => {
+    const id = ++toastID.current
+    setToasts((current) => [...current, { id, tone, message }])
+    window.setTimeout(() => setToasts((current) => current.filter((toast) => toast.id !== id)), 4200)
+  }, [])
+
+  function report(caught: unknown) {
+    const message = caught instanceof Error ? caught.message : String(caught)
+    setError(message)
+    notify('bad', message)
+  }
 
   async function load() {
     try {
       const [result, connected, queue] = await Promise.all([bootstrap(), spotifyConnected(), needsReview()])
       if (result.error) throw new Error(result.error)
-      setData(result); setDrafts(result.drafts); setTransitionFeedback(result.transitionFeedback ?? []); setSpotifyReady(connected); setResearchQueue(queue)
+      setData(result)
+      setDrafts(result.drafts)
+      setSpotifyReady(connected)
+      setResearchQueue(queue)
+      setError('')
       if (connected) setPlaylists(await spotifyPlaylists())
-    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)) }
+    } catch (caught) {
+      report(caught)
+    }
   }
 
-  async function saveEnrichment(input: TrackEnrichment) {
-    setBusy(true); setError('')
-    try {
-      await enrichTrack(input)
-      const [result, queue] = await Promise.all([bootstrap(), needsReview()])
-      setData(result); setResearchQueue(queue)
-    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)) }
-    finally { setBusy(false) }
-  }
+  // ⌘1–⌘4 move between workspaces the way a native app does.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!event.metaKey && !event.ctrlKey) return
+      const index = Number.parseInt(event.key, 10) - 1
+      if (Number.isNaN(index) || index < 0 || index >= sectionOrder.length) return
+      event.preventDefault()
+      setSection(sectionOrder[index])
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
   async function generate() {
-    setBusy(true); setError(''); setPublished('')
+    setBusy(true)
+    setError('')
     try {
       const result = await generateSets(request)
-      setDrafts(result); setSelectedDraft(0); setSelectedPosition(1)
+      setDrafts(result)
+      setSelectedDraft(0)
+      setSelectedPosition(1)
+      setSection('studio')
       setData((current) => current ? { ...current, draftCount: current.draftCount + result.length, drafts: result } : current)
-    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)) }
-    finally { setBusy(false) }
+      notify('ok', `${result.length} variations ready`)
+    } catch (caught) {
+      report(caught)
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function publish() {
-    if (!activeDraft) return
-    setBusy(true); setError(''); setPublished('')
-    try { const playlist = await publishSet(activeDraft.id); setPublished(playlist.Name) }
-    catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)) }
-    finally { setBusy(false) }
+    const draft = drafts[selectedDraft]
+    if (!draft) return
+    setBusy(true)
+    try {
+      const playlist = await publishSet(draft.id)
+      notify('ok', `Published ${playlist.Name}`)
+      if (spotifyReady) setPlaylists(await spotifyPlaylists())
+    } catch (caught) {
+      report(caught)
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function connect() {
-    setBusy(true); setError('')
-    try { await connectSpotify(); setSpotifyReady(true); setPlaylists(await spotifyPlaylists()) }
-    catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)) }
-    finally { setBusy(false) }
+    setBusy(true)
+    try {
+      await connectSpotify()
+      setSpotifyReady(true)
+      setPlaylists(await spotifyPlaylists())
+      notify('ok', 'Spotify connected')
+    } catch (caught) {
+      report(caught)
+    } finally {
+      setBusy(false)
+    }
   }
 
-  async function syncSources(playlistIDs: string[]) {
-    setBusy(true); setError('')
+  async function sync(playlistIDs: string[]) {
+    if (playlistIDs.length === 0) return
+    setSyncing(playlistIDs)
+    setBusy(true)
     try {
       const result = await syncSpotifyPlaylists(playlistIDs)
-      setData(result); setDrafts(result.drafts); setRequest((current) => ({ ...current, sourcePlaylistIds: playlistIDs }))
+      setData(result)
+      setDrafts(result.drafts)
       setPlaylists(await spotifyPlaylists())
-    } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); throw caught }
-    finally { setBusy(false) }
+      setResearchQueue(await needsReview())
+      notify('ok', playlistIDs.length === 1 ? 'Crate synced into the library' : `${playlistIDs.length} crates synced`)
+    } catch (caught) {
+      report(caught)
+    } finally {
+      setSyncing([])
+      setBusy(false)
+    }
+  }
+
+  async function saveEnrichment(input: TrackEnrichment) {
+    setBusy(true)
+    try {
+      await enrichTrack(input)
+      const [result, queue] = await Promise.all([bootstrap(), needsReview()])
+      setData(result)
+      setResearchQueue(queue)
+      notify('ok', 'Features verified')
+    } catch (caught) {
+      report(caught)
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function recordTransition(fromTrackId: string, toTrackId: string, verdict: TransitionVerdict) {
-    const key = `${fromTrackId}\u0000${toTrackId}`
-    const previous = transitionFeedback
-    const optimistic: TransitionFeedback = { fromTrackId, toTrackId, verdict, recordedAt: new Date().toISOString() }
-    setSavingTransition(key); setError('')
-    setTransitionFeedback((current) => [optimistic, ...current.filter((item) => item.fromTrackId !== fromTrackId || item.toTrackId !== toTrackId)])
+    const key = transitionKey(fromTrackId, toTrackId)
+    const previous = data?.transitionFeedback ?? []
+    const optimistic = { fromTrackId, toTrackId, verdict, recordedAt: new Date().toISOString() }
+    const replace = (list: typeof previous) => [optimistic, ...list.filter((item) => item.fromTrackId !== fromTrackId || item.toTrackId !== toTrackId)]
+    setSavingTransition(key)
+    setData((current) => current ? { ...current, transitionFeedback: replace(current.transitionFeedback ?? []) } : current)
     try {
       const saved = await saveTransitionFeedback(fromTrackId, toTrackId, verdict)
-      setTransitionFeedback((current) => [saved, ...current.filter((item) => item.fromTrackId !== fromTrackId || item.toTrackId !== toTrackId)])
+      setData((current) => current
+        ? { ...current, transitionFeedback: [saved, ...(current.transitionFeedback ?? []).filter((item) => item.fromTrackId !== fromTrackId || item.toTrackId !== toTrackId)] }
+        : current)
     } catch (caught) {
-      setTransitionFeedback(previous)
-      setError(caught instanceof Error ? caught.message : String(caught))
-    } finally { setSavingTransition('') }
+      setData((current) => current ? { ...current, transitionFeedback: previous } : current)
+      report(caught)
+    } finally {
+      setSavingTransition('')
+    }
   }
 
-  const activeDraft = drafts[selectedDraft]
-  const feedbackByTransition = useMemo(() => new Map(transitionFeedback.map((item) => [`${item.fromTrackId}\u0000${item.toTrackId}`, item])), [transitionFeedback])
-  const activeTrack = activeDraft?.tracks.find((item) => item.position === selectedPosition) ?? activeDraft?.tracks[0]
-  const nextTrack = activeTrack && activeDraft?.tracks.find((item) => item.transition.fromTrackId === activeTrack.track.id)
-  const activeTransitionFeedback = activeTrack && nextTrack ? feedbackByTransition.get(`${activeTrack.track.id}\u0000${nextTrack.track.id}`) : undefined
+  const tracks = data?.tracks ?? []
+  const crates = data?.syncedPlaylists ?? []
+  const feedback = useMemo(
+    () => new Map((data?.transitionFeedback ?? []).map((item) => [transitionKey(item.fromTrackId, item.toTrackId), item])),
+    [data?.transitionFeedback],
+  )
+  const eligibleCount = request.sourcePlaylistIds.length === 0
+    ? tracks.length
+    : tracks.filter((track) => track.sourcePlaylistIds?.some((id) => request.sourcePlaylistIds.includes(id))).length
 
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <div className="brand"><Disc3 size={19} /><strong>Cueflow</strong></div>
-        <nav aria-label="Primary"><button className={view === 'builder' ? 'active' : ''} onClick={() => setView('builder')}>Set builder</button><button className={view === 'research' ? 'active' : ''} onClick={() => setView('research')}>Research {researchQueue.length > 0 && <span>{researchQueue.length}</span>}</button></nav>
-        <div className="app-status"><span className={data?.databaseReady ? 'ready' : ''}>{data?.trackCount ?? '—'} tracks</span><button type="button" disabled={busy || spotifyReady} onClick={() => void connect()}><Link2 size={13} /> {spotifyReady ? 'Spotify connected' : 'Connect Spotify'}</button><button type="button" className="icon-button" onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')} aria-label={`Use ${theme === 'dark' ? 'light' : 'dark'} mode`} title={`Use ${theme === 'dark' ? 'light' : 'dark'} mode`}>{theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}</button><button type="button" className="icon-button" onClick={() => void load()} aria-label="Refresh"><RefreshCw size={15} /></button></div>
-      </header>
+    <div className="app">
+      <Sidebar
+        section={section}
+        trackCount={data?.trackCount ?? 0}
+        crateCount={crates.length}
+        researchCount={researchQueue.length}
+        spotifyReady={spotifyReady}
+        busy={busy}
+        theme={theme}
+        onNavigate={setSection}
+        onConnect={() => void connect()}
+        onToggleTheme={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}
+        onRefresh={() => void load()}
+      />
 
-      {error && <div className="error-banner"><AlertCircle size={17} /><span>{error}</span></div>}
+      {section === 'studio' && (
+        <StudioView
+          drafts={drafts}
+          selectedDraft={selectedDraft}
+          selectedPosition={selectedPosition}
+          request={request}
+          tracks={tracks}
+          crates={crates}
+          eligibleCount={eligibleCount}
+          feedback={feedback}
+          savingTransition={savingTransition}
+          spotifyReady={spotifyReady}
+          busy={busy}
+          onRequestChange={setRequest}
+          onGenerate={() => void generate()}
+          onPublish={() => void publish()}
+          onSelectDraft={(index) => { setSelectedDraft(index); setSelectedPosition(1) }}
+          onSelectPosition={setSelectedPosition}
+          onFeedback={(fromTrackId, toTrackId, verdict) => void recordTransition(fromTrackId, toTrackId, verdict)}
+          onNavigate={setSection}
+        />
+      )}
+      {section === 'library' && <LibraryView tracks={tracks} crates={crates} onNavigate={setSection} />}
+      {section === 'sources' && (
+        <SourcesView
+          playlists={playlists}
+          crates={crates}
+          tracks={tracks}
+          spotifyReady={spotifyReady}
+          busy={busy}
+          syncing={syncing}
+          onSync={(ids) => void sync(ids)}
+          onConnect={() => void connect()}
+        />
+      )}
+      {section === 'research' && <ResearchView tracks={researchQueue} busy={busy} onSave={saveEnrichment} />}
 
-      {view === 'research' ? <main className="research-page"><ResearchDesk tracks={researchQueue} busy={busy} onSave={saveEnrichment} /></main> :
-        <main className="builder-layout">
-          <GeneratorPanel value={request} tracks={data?.tracks ?? []} playlists={playlists} spotifyReady={spotifyReady} busy={busy} onChange={setRequest} onSyncSources={syncSources} onGenerate={() => void generate()} />
-          <section className="set-canvas">
-            {!activeDraft ? <div className="empty-set"><Disc3 size={28} /><h2>No set yet</h2><p>Choose your constraints, add any must-play tracks, then generate a few directions.</p></div> : <div className="set-workspace">
-              <header className="set-header">
-                <div><span>{activeDraft.arc} · {formatDuration(activeDraft.durationSeconds)} · {activeDraft.tracks.length} tracks</span><h1>{activeDraft.name}</h1><p>Generated {formatDate(activeDraft.createdAt)} · {activeDraft.temporalCoverage > 0 ? `${Math.round(activeDraft.temporalCoverage)}% cue-window coverage at ${Math.round(activeDraft.temporalConfidence)}% confidence` : 'metadata-only transition evidence'}</p></div>
-                <div className="set-actions"><div className="quality" title="Metadata-based heuristic fit; this is not a rendered-audio quality score"><strong>{activeDraft.qualityScore}</strong><span>heuristic fit</span></div><button type="button" disabled={!spotifyReady || busy} onClick={() => void publish()}><Send size={14} /> Publish</button></div>
-              </header>
-
-              {published && <div className="publish-success"><Check size={14} /> Published {published}</div>}
-
-              <WaveformPanel item={activeTrack} nextItem={nextTrack} />
-
-              <div className="set-toolbar">
-                <div className="variation-bar" role="tablist" aria-label="Set variations">{drafts.map((draft, index) => <button type="button" role="tab" aria-selected={selectedDraft === index} className={selectedDraft === index ? 'active' : ''} key={draft.id} onClick={() => { setSelectedDraft(index); setSelectedPosition(1) }}><span>{String.fromCharCode(65 + index)}</span>{draft.qualityScore}</button>)}</div>
-                <div className="score-summary"><span>Energy <b>{Math.round(activeDraft.energyFit)}</b></span><span>Harmony <b>{Math.round(activeDraft.harmonicFlow)}</b></span><span>Tempo <b>{Math.round(activeDraft.tempoFlow)}</b></span><span>Safety <b>{Math.round(activeDraft.transitionSafety)}</b></span></div>
-              </div>
-
-              <MixRibbon draft={activeDraft} selectedPosition={selectedPosition} feedback={transitionFeedback} onSelect={setSelectedPosition} />
-
-              <div className="set-body">
-                <div className="track-ledger" aria-label="Set track list">
-                  <div className="ledger-head"><span>#</span><span /><span>Track</span><span>BPM</span><span>Key</span><span>Energy</span></div>
-                  <div className="ledger-scroll">
-                    {activeDraft.tracks.map((item) => {
-                      const verdict = feedbackByTransition.get(`${item.transition.fromTrackId}\u0000${item.transition.toTrackId}`)?.verdict
-                      return <button type="button" key={item.track.id} className={[item.position === selectedPosition ? 'selected' : '', verdict ? `verdict-${verdict}` : ''].filter(Boolean).join(' ')} onClick={() => setSelectedPosition(item.position)} aria-label={`${item.position}. ${item.track.title} by ${item.track.artist}${verdict ? `, incoming transition ${verdict}` : ''}`}>
-                        <span>{String(item.position).padStart(2, '0')}</span><TrackArtwork track={item.track} /><span><strong>{item.track.title}</strong><small>{item.track.artist}</small></span><b>{item.track.bpm}</b><CamelotKey value={item.track.camelot} compact /><i><span style={{ width: `${item.track.energy * 100}%` }} /></i>
-                        {verdict && <span className={`ledger-transition-cue verdict-${verdict}`} aria-hidden="true">{verdict === 'compatible' ? <><ArrowDown size={10} /><Sparkles size={9} /></> : <X size={9} />}</span>}
-                      </button>
-                    })}
-                  </div>
-                </div>
-                <SetInspector item={activeTrack} nextItem={nextTrack} feedback={activeTransitionFeedback} saving={savingTransition !== ''} onFeedback={(fromTrackId, toTrackId, verdict) => void recordTransition(fromTrackId, toTrackId, verdict)} />
-              </div>
-            </div>}
-          </section>
-        </main>}
+      {error && (
+        <div className="error-banner" role="alert">
+          <AlertCircle size={16} />
+          <span>{error}</span>
+          <button type="button" className="btn sm ghost" onClick={() => setError('')}>Dismiss</button>
+        </div>
+      )}
+      <Toasts toasts={toasts} />
     </div>
   )
 }

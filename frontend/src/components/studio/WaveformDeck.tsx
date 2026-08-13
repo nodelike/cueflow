@@ -1,13 +1,10 @@
 import { AudioWaveform } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import { trackWaveform } from '../api'
-import type { SetTrack, TrackWaveform, WaveformPoint } from '../types'
+import { trackWaveform } from '../../api'
+import { formatBpm, formatClock, padPosition } from '../../lib/format'
+import type { SetTrack, TrackWaveform, WaveformPoint } from '../../types'
 
-export type WaveformCue = {
-  kind: 'in' | 'out'
-  startSeconds: number
-  endSeconds: number
-}
+export type WaveformCue = { kind: 'in' | 'out'; startSeconds: number; endSeconds: number }
 
 type WaveformState =
   | { status: 'idle' | 'loading' | 'error' }
@@ -19,7 +16,8 @@ const center = viewHeight / 2
 const amplitude = 48
 const maxVisiblePoints = 1200
 
-export function WaveformPanel({ item, nextItem }: { item?: SetTrack; nextItem?: SetTrack }) {
+/** Full-track envelope for the selected recording, with its planned cue windows. */
+export function WaveformDeck({ item, nextItem }: { item?: SetTrack; nextItem?: SetTrack }) {
   const requests = useRef(new Map<string, Promise<TrackWaveform>>())
   const [state, setState] = useState<WaveformState>({ status: 'idle' })
   const trackID = item?.track.id
@@ -69,63 +67,83 @@ export function WaveformPanel({ item, nextItem }: { item?: SetTrack; nextItem?: 
   })
 
   return (
-    <section className="waveform-deck" aria-label={`Full waveform for ${track.title}`}>
-      <header className="waveform-deck-header">
-        <div className="waveform-track">
-          <strong>{String(item.position).padStart(2, '0')}</strong>
-          <div><span>Selected track</span><h2>{track.title}</h2><p>{track.artist}</p></div>
+    <section className="deck panel" aria-label={`Full waveform for ${track.title}`}>
+      <header className="deck-head">
+        <div className="deck-track">
+          <strong className="num">{padPosition(item.position)}</strong>
+          <div>
+            <span className="eyebrow">Now inspecting</span>
+            <h2 className="truncate">{track.title}</h2>
+            <p className="truncate">{track.artist}</p>
+          </div>
         </div>
-        <div className="waveform-deck-meta">
-          <span><b>{track.bpm}</b> BPM</span><span><b>{track.camelot || '—'}</b> key</span><span><b>{formatTimecode(duration)}</b> full track</span>
-          <div className="waveform-legend" aria-label="Waveform layers"><span><i className="peak" /> Peak</span><span><i className="rms" /> RMS</span></div>
+        <div className="deck-facts">
+          <span><b className="num">{formatBpm(track.bpm)}</b> bpm</span>
+          <span><b className="num">{track.camelot || '—'}</b> key</span>
+          <span><b className="num">{formatClock(duration)}</b> length</span>
+          <div className="deck-legend" aria-label="Waveform layers">
+            <span><i className="peak" /> Peak</span>
+            <span><i className="rms" /> RMS</span>
+          </div>
         </div>
       </header>
 
       {state.status === 'loading' || state.status === 'idle' ? (
-        <div className="waveform-state loading" role="status"><i /><span>Loading waveform…</span></div>
+        <div className="deck-state" role="status"><span className="spinner" /><span>Loading waveform…</span></div>
       ) : state.status === 'error' ? (
-        <div className="waveform-state"><AudioWaveform size={18} /><strong>Waveform unavailable</strong><span>Select another track, then return to retry.</span></div>
+        <div className="deck-state"><AudioWaveform size={17} /><strong>Waveform unavailable</strong><span>Select another track, then return to retry.</span></div>
       ) : points.length === 0 ? (
-        <div className="waveform-state"><AudioWaveform size={18} /><strong>Full recording not linked</strong><span>Import or link the complete audio file to build this waveform.</span></div>
+        <div className="deck-state"><AudioWaveform size={17} /><strong>Full recording not linked</strong><span>Import or link the complete audio file to build this waveform.</span></div>
       ) : (
         <>
-          <div className="waveform-canvas">
-            <svg
-              viewBox={`0 0 ${viewWidth} ${viewHeight}`}
-              preserveAspectRatio="none"
-              role="img"
-              aria-label={waveformLabel(track.title, visibleCues)}
-            >
+          <div className="deck-canvas">
+            <svg viewBox={`0 0 ${viewWidth} ${viewHeight}`} preserveAspectRatio="none" role="img" aria-label={waveformLabel(track.title, visibleCues)}>
               <title>{waveformLabel(track.title, visibleCues)}</title>
-              <g className="waveform-grid" aria-hidden="true">
+              <g className="deck-grid" aria-hidden="true">
                 <line x1="400" y1="0" x2="400" y2={viewHeight} />
                 <line x1="800" y1="0" x2="800" y2={viewHeight} />
                 <line x1="1200" y1="0" x2="1200" y2={viewHeight} />
               </g>
-              {visibleCues.map((cue) => <rect
-                key={`${cue.kind}-${cue.startSeconds}`}
-                className={`waveform-cue-window cue-${cue.kind}`}
-                x={cue.start * viewWidth}
-                y="1"
-                width={Math.max(2, (cue.end - cue.start) * viewWidth)}
-                height={viewHeight - 2}
-                vectorEffect="non-scaling-stroke"
-              />)}
-              <line className="waveform-baseline" x1="0" y1={center} x2={viewWidth} y2={center} vectorEffect="non-scaling-stroke" />
-              <path className="waveform-envelope peak" d={peakPath} />
-              <path className="waveform-envelope rms" d={rmsPath} />
+              {visibleCues.map((cue) => (
+                <rect
+                  key={`${cue.kind}-${cue.startSeconds}`}
+                  className={`deck-cue cue-${cue.kind}`}
+                  x={cue.start * viewWidth}
+                  y="1"
+                  width={Math.max(2, (cue.end - cue.start) * viewWidth)}
+                  height={viewHeight - 2}
+                  vectorEffect="non-scaling-stroke"
+                />
+              ))}
+              <line className="deck-baseline" x1="0" y1={center} x2={viewWidth} y2={center} vectorEffect="non-scaling-stroke" />
+              <path className="deck-envelope peak" d={peakPath} />
+              <path className="deck-envelope rms" d={rmsPath} />
             </svg>
-            {visibleCues.map((cue) => <span
-              aria-hidden="true"
-              key={`label-${cue.kind}-${cue.startSeconds}`}
-              className={`waveform-cue-label cue-${cue.kind}`}
-              style={{ left: `${cue.start * 100}%` }}
-            >{cue.kind}</span>)}
+            {visibleCues.map((cue) => (
+              <span
+                aria-hidden="true"
+                key={`label-${cue.kind}-${cue.startSeconds}`}
+                className={`deck-cue-label cue-${cue.kind}`}
+                style={{ left: `${cue.start * 100}%` }}
+              >
+                {cue.kind}
+              </span>
+            ))}
           </div>
-          <div className="waveform-timecode" aria-hidden="true"><span>00:00</span><span>{formatTimecode(duration / 2)}</span><span>{formatTimecode(duration)}</span></div>
-          {visibleCues.length > 0 && <div className="waveform-cue-readout" aria-label="Planned cue windows">
-            {visibleCues.map((cue) => <span key={`readout-${cue.kind}-${cue.startSeconds}`} className={`cue-${cue.kind}`}><i /> <b>{cue.kind}</b> {formatTimecode(cue.startSeconds)}–{formatTimecode(cue.endSeconds)}</span>)}
-          </div>}
+          <div className="deck-footer">
+            <div className="deck-timecode num" aria-hidden="true">
+              <span>00:00</span><span>{formatClock(duration / 2)}</span><span>{formatClock(duration)}</span>
+            </div>
+            {visibleCues.length > 0 && (
+              <div className="deck-cues num" aria-label="Planned cue windows">
+                {visibleCues.map((cue) => (
+                  <span key={`readout-${cue.kind}-${cue.startSeconds}`} className={`cue-${cue.kind}`}>
+                    <i /> <b>{cue.kind}</b> {formatClock(cue.startSeconds)}–{formatClock(cue.endSeconds)}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
     </section>
@@ -164,14 +182,8 @@ function downsample(points: WaveformPoint[], limit: number) {
 }
 
 function waveformLabel(title: string, cues: Array<WaveformCue & { start: number; end: number }>) {
-  const detail = cues.map((cue) => `${cue.kind === 'in' ? 'incoming' : 'outgoing'} cue ${formatTimecode(cue.startSeconds)} to ${formatTimecode(cue.endSeconds)}`).join('; ')
+  const detail = cues.map((cue) => `${cue.kind === 'in' ? 'incoming' : 'outgoing'} cue ${formatClock(cue.startSeconds)} to ${formatClock(cue.endSeconds)}`).join('; ')
   return `Full-track peak and RMS waveform for ${title}${detail ? `; ${detail}` : ''}`
-}
-
-function formatTimecode(seconds: number) {
-  const total = Math.max(0, Math.round(seconds))
-  const minutes = Math.floor(total / 60)
-  return `${String(minutes).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 
 function clamp(value: number, minimum: number, maximum: number) {

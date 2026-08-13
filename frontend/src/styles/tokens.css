@@ -1,0 +1,111 @@
+/* Cueflow design tokens.
+   One scale for type, space, radius, and colour. Sections never redefine a raw
+   value; they compose these variables so the whole app stays one instrument. */
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
+
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 21px;
+  --text-2xl: 27px;
+  --text-3xl: 34px;
+
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s7: 32px;
+  --s8: 40px;
+
+  --r-xs: 5px;
+  --r-sm: 8px;
+  --r-md: 11px;
+  --r-lg: 15px;
+  --r-pill: 999px;
+
+  --sidebar-width: 204px;
+  --header-height: 60px;
+  --titlebar-inset: 26px;
+
+  --ease: cubic-bezier(.32, .72, 0, 1);
+  --fast: .13s var(--ease);
+  --slow: .22s var(--ease);
+
+  /* Light: paper studio. */
+  color-scheme: light;
+  --app: #eff1f4;
+  --sidebar: #e8ebef;
+  --surface: #ffffff;
+  --raised: #ffffff;
+  --sunken: #f4f6f8;
+  --hover: #f2f4f7;
+  --active: #e9edf2;
+  --line: #e2e6eb;
+  --line-soft: #edf0f3;
+  --line-strong: #ccd2da;
+  --ink: #14171b;
+  --ink-2: #5c646e;
+  --ink-3: #8b939d;
+  --accent: #3157e8;
+  --accent-hover: #2745c5;
+  --accent-ink: #ffffff;
+  --accent-wash: #eef1ff;
+  --accent-line: #b9c4f2;
+  --ok: #0f7a58;
+  --ok-wash: #e8f6f1;
+  --warn: #a75f0c;
+  --warn-wash: #fdf3e6;
+  --bad: #c1492a;
+  --bad-wash: #fdf0ec;
+  --meter: #93a4ea;
+  --overlay: rgba(17, 21, 28, .34);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, .07);
+  --shadow-md: 0 6px 20px rgba(16, 24, 40, .1);
+  --shadow-lg: 0 24px 64px rgba(16, 24, 40, .2);
+  --key-saturation: 70%;
+  --key-lightness: 38%;
+}
+
+:root[data-theme='dark'] {
+  /* Dark: booth light. Acid accent, near-black chassis. */
+  color-scheme: dark;
+  --app: #0b0c0d;
+  --sidebar: #0f1112;
+  --surface: #141719;
+  --raised: #1a1e20;
+  --sunken: #101213;
+  --hover: #1c2023;
+  --active: #22272a;
+  --line: #24282b;
+  --line-soft: #1c2022;
+  --line-strong: #343a3e;
+  --ink: #f3f5ef;
+  --ink-2: #9ba299;
+  --ink-3: #6b726c;
+  --accent: #DEFF00;
+  --accent-hover: #c9e800;
+  --accent-ink: #0f1300;
+  --accent-wash: rgba(222, 255, 0, .09);
+  --accent-line: rgba(222, 255, 0, .32);
+  --ok: #6fe0b0;
+  --ok-wash: rgba(111, 224, 176, .1);
+  --warn: #f2ad5c;
+  --warn-wash: rgba(242, 173, 92, .1);
+  --bad: #ff9c7a;
+  --bad-wash: rgba(255, 156, 122, .1);
+  --meter: #9db32a;
+  --overlay: rgba(0, 0, 0, .62);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, .45);
+  --shadow-lg: 0 28px 70px rgba(0, 0, 0, .62);
+  --key-saturation: 76%;
+  --key-lightness: 66%;
+}

@@ -1,0 +1,44 @@
+/* Sources: platforms, their playlists, and what is mirrored into the library. */
+
+.sources { height: 100%; display: grid; align-content: start; gap: var(--s6); padding: var(--s5) var(--s5) var(--s8); }
+
+.platforms { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--s3); }
+.platform {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+.platform.connected { border-color: color-mix(in srgb, var(--ok) 32%, var(--line)); }
+.platform.disabled { opacity: .6; }
+.platform-mark { width: 44px; height: 44px; display: grid; place-items: center; border-radius: var(--r-sm); background: var(--sunken); color: var(--ink-2); }
+.platform-mark.spotify { color: var(--accent); background: var(--accent-wash); }
+.platform-body h2 { font-size: var(--text-md); }
+.platform-body p { color: var(--ink-2); font-size: var(--text-sm); line-height: 1.45; }
+
+.sources-empty { min-height: 220px; }
+
+.crate-group { display: grid; gap: var(--s3); }
+.crate-group > header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s3); }
+.crate-group > header p { margin-top: 2px; color: var(--ink-3); font-size: var(--text-sm); }
+
+.crate-list { margin: 0; padding: 0; list-style: none; overflow: hidden; }
+.crate {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--s4);
+  padding: var(--s2) var(--s4);
+  border-bottom: 1px solid var(--line-soft);
+}
+.crate:last-child { border-bottom: 0; }
+.crate:hover { background: var(--hover); }
+.crate-cover { width: 44px; height: 44px; display: block; border: 1px solid var(--line); border-radius: var(--r-xs); background: var(--sunken); object-fit: cover; }
+.crate-cover.fallback { display: grid; place-items: center; color: var(--ink-3); }
+.crate-name { min-width: 0; display: grid; gap: 1px; }
+.crate-name strong { font-size: var(--text-base); font-weight: 550; }
+.crate-name small { color: var(--ink-2); font-size: var(--text-sm); }

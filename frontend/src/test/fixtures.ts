@@ -1,4 +1,4 @@
-import type { Bootstrap, SetDraft } from '../types'
+import type { Bootstrap, SetDraft, SourcePlaylist } from '../types'
 
 export const draft: SetDraft = {
   id: 'draft-a', sessionId: 'session-1', name: 'Afro to pressure — A', variation: 1, arc: 'journey',
@@ -17,4 +17,11 @@ export const draft: SetDraft = {
   ],
 }
 
-export const bootstrapData: Bootstrap = { databaseReady: true, trackCount: 40, draftCount: 1, tracks: draft.tracks.map((item) => item.track), drafts: [draft], transitionFeedback: [] }
+export const crate: SourcePlaylist = {
+  id: 'afro', name: 'Afro Vibezz', kind: 'source', imageUrl: 'https://image.test/afro', trackCount: 85, syncedAt: '2026-08-12T09:00:00Z',
+}
+
+export const bootstrapData: Bootstrap = {
+  databaseReady: true, trackCount: 40, draftCount: 1,
+  tracks: draft.tracks.map((item) => item.track), drafts: [draft], syncedPlaylists: [crate], transitionFeedback: [],
+}
