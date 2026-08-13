@@ -286,4 +286,117 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @keyframes verified-sparkle { 0% { opacity: 0; transform: scale(.35) rotate(-24deg); } 62% { opacity: 1; transform: scale(1.18) rotate(8deg); } 100% { opacity: 1; transform: scale(1) rotate(0); } }
 @media (max-width: 1200px) { .builder-layout { grid-template-columns: 300px minmax(0,1fr); }.set-canvas { padding: 15px 16px 17px; }.set-body { grid-template-columns: minmax(390px,1fr) 248px; gap: 10px; }.track-inspector { padding: 15px; }.app-status > span { display: none; }.score-summary { gap: 13px; }.waveform-deck-header { gap: 10px; }.waveform-deck-meta { gap: 9px; }.waveform-track h2, .waveform-track p { max-width: 30vw; }.waveform-legend { display: none; } }
 @media (max-height: 700px) { .track-inspector:has(.transition-check) { padding: 9px; }.track-inspector:has(.transition-check) .inspector-title, .track-inspector:has(.transition-check) .track-metadata { display: none; }.track-inspector:has(.transition-check) .transition-check { margin: 0; padding: 0; border: 0; }.track-inspector:has(.transition-check) .transition-check > header span, .track-inspector:has(.transition-check) .transition-check > header strong { font-size: 7px; }.track-inspector:has(.transition-check) .transition-target { grid-template-columns: 23px 28px minmax(0,1fr); gap: 6px; margin: 6px 0; padding: 5px; }.track-inspector:has(.transition-check) .transition-direction { width: 23px; height: 23px; }.track-inspector:has(.transition-check) .transition-direction > svg:first-child { width: 14px; height: 14px; }.track-inspector:has(.transition-check) .transition-sparkle { width: 9px; height: 9px; top: -5px; right: -4px; }.track-inspector:has(.transition-check) .transition-target .track-artwork { width: 28px; height: 28px; }.track-inspector:has(.transition-check) .transition-target > div > span, .track-inspector:has(.transition-check) .transition-target small { font-size: 6px; }.track-inspector:has(.transition-check) .transition-target strong { font-size: 9px; }.track-inspector:has(.transition-check) .verdict-actions { gap: 5px; }.track-inspector:has(.transition-check) .verdict-actions button { height: 25px; font-size: 8px; }.track-inspector:has(.transition-check) .verdict-status { min-height: 8px; margin-top: 5px; font-size: 7px; } }
+
+/* Legibility pass: preserve the dense studio layout without using microtype. */
+.app-shell { font-size: 14px; line-height: 1.35; }
+.brand strong { font-size: 16px; }
+.app-header nav button { font-size: 13px; }
+.app-header nav span { font-size: 11px; }
+.app-status > span { font-size: 12px; }
+.app-status button { font-size: 12px; }
+
+.brief-panel { font-size: 14px; }
+.brief-heading h1 { font-size: 25px; }
+.brief-heading span, .section-label > span, .control > span, .variation-control > span { font-size: 12px; }
+.brief-heading > small, .section-label small, .source-summary > span { font-size: 12px; }
+.control input, .control select { font-size: 14px; }
+.choose-sources-button, .add-track-button { font-size: 13px; }
+.must-play-item strong { font-size: 13px; }
+.must-play-item small { font-size: 11px; }
+.groove-options button, .variation-control button { font-size: 12px; }
+.advanced-controls summary { font-size: 12px; }
+.range-control > span { font-size: 11px; }
+.generate-button { font-size: 14px; }
+.source-lock { font-size: 11px; line-height: 1.45; }
+
+.set-canvas { font-size: 14px; }
+.set-header > div:first-child > span { font-size: 11px; }
+.set-header h1 { font-size: 30px; }
+.set-header p, .set-actions .quality span { font-size: 11px; }
+.set-actions > button { font-size: 12px; }
+.score-summary { font-size: 11px; }
+.sequence-overview button span { font-size: 10px; }
+.ledger-head { font-size: 10px; }
+.ledger-scroll > button > span:first-child { font-size: 10px; }
+.track-ledger strong { font-size: 13px; }
+.track-ledger small { font-size: 11px; }
+.track-ledger b { font-size: 11px; }
+.camelot-key.compact { font-size: 10px; }
+
+.track-inspector > * { font-size: 12px; }
+.inspector-title > div > span { font-size: 10px; }
+.track-inspector h2 { font-size: 22px; }
+.track-inspector header p { font-size: 12px; }
+.track-metadata dt { font-size: 10px; }
+.track-metadata dd { font-size: 13px; }
+.transition-check > header span, .transition-check > header strong { font-size: 10px; }
+.transition-target > div > span { font-size: 10px; }
+.transition-target strong { font-size: 14px; }
+.transition-target small { font-size: 11px; }
+.verdict-actions button { font-size: 12px; }
+.verdict-status { font-size: 11px; line-height: 1.45; }
+.transition-heading span { font-size: 11px; }
+.transition-detail > p { font-size: 11px; line-height: 1.55; }
+.transition-components span, .transition-components strong { font-size: 10px; }
+.transition-components small { font-size: 9px; }
+.track-inspector footer span { font-size: 11px; }
+.track-inspector footer p { font-size: 10px; line-height: 1.5; }
+
+.waveform-track span { font-size: 10px; }
+.waveform-track > strong { font-size: 19px; }
+.waveform-track h2 { font-size: 17px; }
+.waveform-track p { font-size: 11px; }
+.waveform-deck-meta, .waveform-legend, .waveform-timecode, .waveform-cue-readout { font-size: 10px; }
+.waveform-deck-meta b { font-size: 11px; }
+.waveform-cue-label { padding: 2px 4px; font-size: 9px; }
+.waveform-state strong { font-size: 12px; }
+.waveform-state span { font-size: 10px; }
+
+.track-picker { font-size: 14px; }
+.track-picker h2 { font-size: 23px; }
+.track-picker header p { font-size: 12px; }
+.track-search input { font-size: 14px; }
+.picker-results strong { font-size: 13px; }
+.picker-results small { font-size: 11px; }
+.picker-results em { font-size: 10px; }
+.track-picker footer span, .track-picker footer button { font-size: 12px; }
+
+.research-page { font-size: 14px; }
+.eyebrow { font-size: 11px; }
+.queue-heading strong { font-size: 22px; }
+.queue-heading small { font-size: 11px; }
+.research-queue > button strong { font-size: 13px; }
+.research-queue > button small { font-size: 11px; }
+.research-queue > button em { font-size: 10px; }
+.research-title h1 { font-size: 29px; }
+.research-title p, .research-title > a { font-size: 12px; }
+.listening-note strong { font-size: 13px; }
+.listening-note span { font-size: 11px; }
+.research-form legend, .research-form label > span { font-size: 11px; }
+.research-form input:not([type=range]), .research-form select, .research-form textarea { font-size: 14px; }
+.review-save { font-size: 13px; }
+.review-policy { font-size: 11px; }
+.research-empty h1 { font-size: 28px; }
+.research-empty p { font-size: 13px; line-height: 1.5; }
+
+@media (max-height: 700px) {
+  .set-canvas { padding: 12px 16px 14px; }
+  .set-workspace { gap: 7px; }
+  .set-header { min-height: 56px; }
+  .set-header h1 { font-size: 26px; }
+  .waveform-deck { padding: 8px 12px 6px; }
+  .waveform-deck-header { margin-bottom: 5px; }
+  .waveform-canvas, .waveform-state { height: 70px; }
+  .waveform-timecode { margin-top: 2px; }
+  .waveform-cue-readout { margin-top: 3px; }
+  .sequence-overview { height: 52px; padding-top: 6px; }
+  .sequence-overview button { height: 39px; }
+  .track-inspector:has(.transition-check) .transition-check > header span,
+  .track-inspector:has(.transition-check) .transition-check > header strong { font-size: 10px; }
+  .track-inspector:has(.transition-check) .transition-target > div > span,
+  .track-inspector:has(.transition-check) .transition-target small { font-size: 10px; }
+  .track-inspector:has(.transition-check) .transition-target strong { font-size: 12px; }
+  .track-inspector:has(.transition-check) .verdict-actions button { height: 30px; font-size: 11px; }
+  .track-inspector:has(.transition-check) .verdict-status { min-height: 11px; margin-top: 7px; font-size: 10px; }
+}
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }

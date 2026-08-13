@@ -57,6 +57,7 @@ test('generates, compares, and inspects persisted set variations', async ({ page
   await expect(fieldTest.getByText('Verified works')).toBeVisible()
   await expect(fieldTest.getByText(/Cueflow will favor this pairing/i)).toBeVisible()
   await page.reload()
+  await mockDesktopWaveform(page)
   await expect(page.getByLabel(/Field test .* into .*/).getByRole('button', { name: 'Mark this transition compatible' })).toHaveAttribute('aria-pressed', 'true')
   expect(await page.evaluate(() => ({ scrollY: window.scrollY, bodyOverflow: getComputedStyle(document.body).overflow }))).toEqual({ scrollY: 0, bodyOverflow: 'hidden' })
   const ledgerScroll = page.getByLabel('Set track list').locator('.ledger-scroll')
@@ -85,7 +86,7 @@ test('generates, compares, and inspects persisted set variations', async ({ page
       trackRowHeight: document.querySelector('.ledger-scroll > button')!.getBoundingClientRect().height,
     }
   })
-  expect(readability).toEqual({ control: 13, sectionLabel: 10, trackTitle: 12, trackArtist: 10, inspectorTitle: 20, primaryAction: 13, trackRowHeight: 52 })
+  expect(readability).toEqual({ control: 14, sectionLabel: 12, trackTitle: 13, trackArtist: 11, inspectorTitle: 22, primaryAction: 14, trackRowHeight: 52 })
   const windowChrome = await page.evaluate(() => ({
     titlebarHeight: document.querySelector('.app-header')!.getBoundingClientRect().height,
     workspaceRows: getComputedStyle(document.querySelector('.app-shell')!).gridTemplateRows,
