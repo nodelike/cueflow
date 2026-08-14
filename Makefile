@@ -7,7 +7,7 @@ AIR_VERSION ?= v1.67.3
 TOOLS_DIR ?= $(CURDIR)/.tools
 AIR ?= $(TOOLS_DIR)/air
 
-.PHONY: dev dev-tools dev-api dev-ui bindings migrate seed-demo spotify-auth spotify-sync enrich-import analysis-validate analysis-import test test-go test-ui test-analysis test-e2e build fmt
+.PHONY: dev dev-tools dev-api dev-ui bindings migrate seed-demo spotify-auth spotify-sync enrich-import analysis-validate analysis-import test test-go test-ui test-analysis test-e2e build build-frontend fmt
 
 dev: $(AIR)
 	@echo "Starting Cueflow debug mode: Air reloads Go; Wails/Vite hot-reloads the UI."
@@ -56,7 +56,7 @@ analysis-validate:
 
 test: test-go test-ui test-analysis
 
-test-go:
+test-go: build-frontend
 	DATABASE_URL='$(DATABASE_URL)' $(GO) test ./...
 
 test-ui:
@@ -65,11 +65,14 @@ test-ui:
 test-analysis:
 	$(PYTHON) -m py_compile scripts/analyze_previews.py scripts/analyze_tracks.py scripts/crosscheck_mixgraph.py scripts/prepare_enrichment.py
 
+build-frontend:
+	$(PNPM) --dir frontend build
+
 test-e2e:
 	DATABASE_URL='$(DATABASE_URL)' $(PNPM) --dir frontend test:e2e
 
 build:
-	$(PNPM) --dir frontend build
+	$(MAKE) build-frontend
 	$(WAILS) build
 
 fmt:
