@@ -10,6 +10,10 @@ func TestGenerateRequestDefaultsPreserveExplicitZeroControls(t *testing.T) {
 	if request.DurationMinutes != 60 || request.VariationCount != 3 || request.Arc != "journey" {
 		t.Fatalf("unrelated defaults were not applied: %#v", request)
 	}
+	request = (GenerateRequest{VariationCount: MaxVariationCount + 100}).WithDefaults()
+	if request.VariationCount != MaxVariationCount {
+		t.Fatalf("variation count was not capped: %d", request.VariationCount)
+	}
 }
 
 func TestTransitionFeedbackValidation(t *testing.T) {

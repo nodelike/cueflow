@@ -73,6 +73,8 @@ type GenerateRequest struct {
 	Seed               int64    `json:"seed"`
 }
 
+const MaxVariationCount = 6
+
 func (r GenerateRequest) WithDefaults() GenerateRequest {
 	if r.Name == "" {
 		r.Name = "Untitled journey"
@@ -83,8 +85,8 @@ func (r GenerateRequest) WithDefaults() GenerateRequest {
 	if r.VariationCount <= 0 {
 		r.VariationCount = 3
 	}
-	if r.VariationCount > 6 {
-		r.VariationCount = 6
+	if r.VariationCount > MaxVariationCount {
+		r.VariationCount = MaxVariationCount
 	}
 	if r.Arc == "" {
 		r.Arc = "journey"

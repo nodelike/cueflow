@@ -62,6 +62,9 @@ func (g *Generator) GenerateWithAnalysesAndFeedback(catalog []domain.Track, anal
 	if req.HarmonicStrictness < 0 || req.HarmonicStrictness > 1 || req.Exploration < 0 || req.Exploration > 1 {
 		return nil, fmt.Errorf("strictness and exploration must be between 0 and 1")
 	}
+	if req.VariationCount < 1 || req.VariationCount > domain.MaxVariationCount {
+		return nil, fmt.Errorf("variation count must be between 1 and %d", domain.MaxVariationCount)
+	}
 	for trackID, analysis := range analyses {
 		if analysis.TrackID != trackID {
 			return nil, fmt.Errorf("temporal analysis map key %q contains track %q", trackID, analysis.TrackID)
@@ -106,7 +109,7 @@ func (g *Generator) GenerateWithAnalysesAndFeedback(catalog []domain.Track, anal
 		feedbackByEdge[edgeKey(item.FromTrackID, item.ToTrackID)] = item
 	}
 	sessionID := uuid.NewString()
-	drafts := make([]domain.SetDraft, 0, req.VariationCount)
+	drafts := make([]domain.SetDraft, 0, domain.MaxVariationCount)
 	for variation := 1; variation <= req.VariationCount; variation++ {
 		draft, err := g.generateOne(pool, analyses, feedbackByEdge, req, required, usedEdges, usedTracks, transitionCache, seed+int64(variation*7919), variation, sessionID)
 		if err != nil {
