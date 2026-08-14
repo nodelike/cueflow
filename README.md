@@ -251,7 +251,7 @@ make build
 ```
 
 CI runs the unit and integration suites against PostgreSQL, audits JavaScript
-dependencies, and checks reachable Go code with `govulncheck`. See
+and Python dependencies, and checks reachable Go code with `govulncheck`. See
 [CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change and
 [SECURITY.md](SECURITY.md) for private vulnerability reporting.
 

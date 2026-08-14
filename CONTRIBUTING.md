@@ -21,6 +21,7 @@ Follow the setup in the README, then run:
 ```sh
 make test
 pnpm --dir frontend audit --audit-level high
+pip-audit -r scripts/requirements.txt
 go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 make build
 ```
