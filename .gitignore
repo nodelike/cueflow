@@ -5,6 +5,8 @@ frontend/node_modules
 frontend/playwright-report
 frontend/test-results
 .env
+.env.*
+!.env.example
 .DS_Store
 coverage.out
 /cueflow
@@ -13,3 +15,6 @@ __pycache__/
 .venv/
 .tools/
 .tmp/
+/graphify-out/
+/.agent-context.json
+/AGENTS.md

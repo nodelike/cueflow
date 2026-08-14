@@ -1,0 +1,13 @@
+Cueflow
+Copyright (c) 2026 Kishore Gunalan
+
+Cueflow is an independent open-source project. It is not affiliated with,
+authorized by, sponsored by, or endorsed by Spotify AB, TIDAL, Algoriddim, or
+the owners of any other product or service referenced by the project.
+
+Spotify, TIDAL, djay, and all other trademarks are the property of their
+respective owners. Use of third-party APIs and content remains subject to the
+applicable provider terms and to the rights attached to that content.
+
+The bundled Nunito font is distributed under the SIL Open Font License 1.1.
+Its license is available at frontend/src/assets/fonts/OFL.txt.

@@ -1,9 +1,14 @@
 # Cueflow
 
+[![CI](https://github.com/nodelike/cueflow/actions/workflows/ci.yml/badge.svg)](https://github.com/nodelike/cueflow/actions/workflows/ci.yml)
+
 Cueflow is a local-first DJ set laboratory. It synchronizes permanent Spotify
 crates, stores explainable musical features in PostgreSQL, generates multiple
 set variations, visualizes their tempo/key/energy flow, and publishes only to
-disposable Set Lab playlists.
+playlists that Cueflow created for that purpose.
+
+Cueflow is early-stage software intended for local experimentation. Review a
+generated set and every proposed transition before using it in a performance.
 
 Source crates are chosen from the connected user's Spotify playlists. Cueflow
 syncs the selected playlists read-only and never removes, reorders, or adds
@@ -34,11 +39,32 @@ with `⌘1`–`⌘4`:
 
 ## Local development
 
+Prerequisites:
+
+- Go 1.26.6 or newer in the 1.26 release line
+- Node.js 24 and pnpm 10
+- PostgreSQL 16 or newer
+- Python 3 for the optional analysis tools
+- Wails v2 and its platform dependencies for the desktop build
+
 The default database URL uses the current macOS user and a local database named
 `cueflow`:
 
 ```sh
 createdb cueflow
+make migrate
+make dev
+```
+
+Alternatively, start the checked-in PostgreSQL container and load the portable
+development environment:
+
+```sh
+docker compose up -d postgres
+cp .env.example .env
+set -a
+. ./.env
+set +a
 make migrate
 make dev
 ```
@@ -72,7 +98,24 @@ Open `http://127.0.0.1:34115`. The browser development build talks to the Go
 API at `http://127.0.0.1:8787`; the packaged desktop build calls the same core
 service through Wails bindings.
 
-Connect Spotify with PKCE and store the refresh token in macOS Keychain:
+### Platform credentials
+
+Create your own Spotify developer application, register
+`http://127.0.0.1:3000/api/spotify/callback`, and export its public client ID.
+Cueflow uses Authorization Code with PKCE; do not create, store, or submit a
+Spotify client secret.
+
+TIDAL support is optional. If you have access to a TIDAL developer application,
+register `http://127.0.0.1:3000/api/source/tidal/callback` and export that
+application's public client ID as well:
+
+```sh
+export CUEFLOW_SPOTIFY_CLIENT_ID='your_spotify_client_id'
+export CUEFLOW_TIDAL_CLIENT_ID='your_tidal_client_id'
+```
+
+Connect Spotify with PKCE and store the refresh token in the operating system's
+credential store:
 
 ```sh
 make spotify-auth
@@ -83,9 +126,10 @@ The desktop app's **Sources** section lists the connected account's playlists
 with their sync state and syncs selected source crates directly, so the CLI IDs
 are only needed for headless workflows.
 
-The packaged desktop app also has a **Connect Spotify** button. It opens the
-same PKCE consent flow and writes the resulting token directly to Keychain;
-Cueflow does not require or store a Spotify client secret.
+The packaged desktop app also has **Connect Spotify** and **Connect TIDAL**
+controls. They open the same PKCE consent flow and write resulting tokens
+directly to the operating system's credential store. OAuth tokens and database
+contents are local state and must never be committed.
 
 Synced tracks without verified BPM/key remain in the catalog with a research
 flag and are excluded from generation. Cueflow never invents musical features.
@@ -206,6 +250,11 @@ make test-e2e
 make build
 ```
 
+CI runs the unit and integration suites against PostgreSQL, audits JavaScript
+dependencies, and checks reachable Go code with `govulncheck`. See
+[CONTRIBUTING.md](CONTRIBUTING.md) before proposing a change and
+[SECURITY.md](SECURITY.md) for private vulnerability reporting.
+
 The generator quality matrix covers 180 set drafts across four energy arcs,
 three durations, five deterministic seeds, and three variations. The E2E suite
 also verifies PostgreSQL-backed review provenance and the full generation,
@@ -214,6 +263,14 @@ comparison, and transition-inspection workflow.
 ## Safety contract
 
 Cueflow never removes tracks from permanent playlists. Publishing is restricted
-to playlists created by Cueflow with the `Set Lab —` prefix. Track facts retain
-their source and confidence so conflicting BPM/key data is visible rather than
-silently overwritten.
+to playlists created by Cueflow with its reserved output prefixes. Track facts
+retain their source and confidence so conflicting BPM/key data is visible rather
+than silently overwritten.
+
+## License and third-party services
+
+Cueflow's source code and project documentation are licensed under the
+[MIT License](LICENSE). The bundled Nunito font is licensed separately under the
+[SIL Open Font License](frontend/src/assets/fonts/OFL.txt). Spotify, TIDAL, djay,
+and other named products are trademarks of their respective owners; Cueflow is
+not affiliated with or endorsed by them. See [NOTICE](NOTICE) for details.
