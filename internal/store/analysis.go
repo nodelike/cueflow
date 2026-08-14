@@ -8,7 +8,7 @@ import (
 	"math"
 	"time"
 
-	"cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/domain"
 
 	"github.com/jackc/pgx/v5"
 )

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"cueflow/internal/domain"
-	"cueflow/internal/fixtures"
-	"cueflow/internal/tidal"
+	"github.com/nodelike/cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/fixtures"
+	"github.com/nodelike/cueflow/internal/tidal"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"

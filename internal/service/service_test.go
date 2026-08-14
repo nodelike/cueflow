@@ -13,10 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"cueflow/internal/domain"
-	"cueflow/internal/spotify"
-	"cueflow/internal/store"
-	"cueflow/internal/tidal"
+	"github.com/nodelike/cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/spotify"
+	"github.com/nodelike/cueflow/internal/store"
+	"github.com/nodelike/cueflow/internal/tidal"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"

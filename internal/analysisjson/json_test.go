@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/domain"
 )
 
 func TestParseAcceptsSingleArrayAndEnvelope(t *testing.T) {

@@ -9,12 +9,12 @@ import (
 	"syscall"
 	"time"
 
-	"cueflow/internal/config"
-	"cueflow/internal/httpapi"
-	"cueflow/internal/service"
-	"cueflow/internal/spotify"
-	"cueflow/internal/store"
-	"cueflow/internal/tidal"
+	"github.com/nodelike/cueflow/internal/config"
+	"github.com/nodelike/cueflow/internal/httpapi"
+	"github.com/nodelike/cueflow/internal/service"
+	"github.com/nodelike/cueflow/internal/spotify"
+	"github.com/nodelike/cueflow/internal/store"
+	"github.com/nodelike/cueflow/internal/tidal"
 )
 
 func main() {

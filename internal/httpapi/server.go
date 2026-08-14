@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"cueflow/internal/domain"
-	"cueflow/internal/service"
+	"github.com/nodelike/cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/service"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

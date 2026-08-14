@@ -8,7 +8,7 @@ import (
 	"sort"
 	"time"
 
-	"cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/domain"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

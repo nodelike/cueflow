@@ -6,13 +6,13 @@ import (
 	"io"
 	"os"
 
-	"cueflow/internal/analysisjson"
-	"cueflow/internal/config"
-	"cueflow/internal/domain"
-	"cueflow/internal/enrichmentcsv"
-	"cueflow/internal/fixtures"
-	"cueflow/internal/spotify"
-	"cueflow/internal/store"
+	"github.com/nodelike/cueflow/internal/analysisjson"
+	"github.com/nodelike/cueflow/internal/config"
+	"github.com/nodelike/cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/enrichmentcsv"
+	"github.com/nodelike/cueflow/internal/fixtures"
+	"github.com/nodelike/cueflow/internal/spotify"
+	"github.com/nodelike/cueflow/internal/store"
 )
 
 func main() {

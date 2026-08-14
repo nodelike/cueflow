@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"cueflow/internal/domain"
-	"cueflow/internal/fixtures"
-	"cueflow/internal/generator"
-	"cueflow/internal/spotify"
-	"cueflow/internal/store"
-	"cueflow/internal/tidal"
+	"github.com/nodelike/cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/fixtures"
+	"github.com/nodelike/cueflow/internal/generator"
+	"github.com/nodelike/cueflow/internal/spotify"
+	"github.com/nodelike/cueflow/internal/store"
+	"github.com/nodelike/cueflow/internal/tidal"
 )
 
 type Service struct {

@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"cueflow/internal/domain"
-	"cueflow/internal/spotify"
+	"github.com/nodelike/cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/spotify"
 
 	"github.com/jackc/pgx/v5"
 )

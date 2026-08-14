@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"cueflow/internal/tidal"
+	"github.com/nodelike/cueflow/internal/tidal"
 
 	"github.com/jackc/pgx/v5"
 )

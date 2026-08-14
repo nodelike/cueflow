@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	"cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/domain"
 )
 
 func scoreTransitionWithAnalyses(from, to domain.Track, analyses map[string]domain.TrackAnalysis, strictness float64) domain.Transition {

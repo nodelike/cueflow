@@ -1,4 +1,4 @@
-module cueflow
+module github.com/nodelike/cueflow
 
 go 1.26.6
 
@@ -45,5 +45,3 @@ require (
 	golang.org/x/sys v0.44.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 )
-
-// replace github.com/wailsapp/wails/v2 v2.13.0 => /Users/nodelike/go/pkg/mod

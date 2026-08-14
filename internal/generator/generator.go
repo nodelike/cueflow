@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/domain"
 
 	"github.com/google/uuid"
 )

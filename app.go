@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"cueflow/internal/config"
-	"cueflow/internal/domain"
-	"cueflow/internal/service"
-	"cueflow/internal/spotify"
-	"cueflow/internal/store"
-	"cueflow/internal/tidal"
+	"github.com/nodelike/cueflow/internal/config"
+	"github.com/nodelike/cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/service"
+	"github.com/nodelike/cueflow/internal/spotify"
+	"github.com/nodelike/cueflow/internal/store"
+	"github.com/nodelike/cueflow/internal/tidal"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )

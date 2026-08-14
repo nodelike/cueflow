@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/domain"
 )
 
 type trackSpec struct {

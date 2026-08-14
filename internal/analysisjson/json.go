@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/domain"
 )
 
 type envelope struct {

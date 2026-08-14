@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"cueflow/internal/fixtures"
+	"github.com/nodelike/cueflow/internal/fixtures"
 )
 
 func TestAnalysisDurationCompatibilityRejectsPreviewEvidence(t *testing.T) {

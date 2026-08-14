@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/domain"
 )
 
 var Header = []string{"track_id", "bpm", "musical_key", "camelot", "energy", "groove", "vocal", "role", "source", "confidence"}

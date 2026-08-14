@@ -5,8 +5,8 @@ import (
 	"math"
 	"testing"
 
-	"cueflow/internal/domain"
-	"cueflow/internal/fixtures"
+	"github.com/nodelike/cueflow/internal/domain"
+	"github.com/nodelike/cueflow/internal/fixtures"
 )
 
 func TestQualityMatrix(t *testing.T) {
