@@ -16,6 +16,15 @@ type memoryStore struct{ token Token }
 func (m *memoryStore) Load() (Token, error)   { return m.token, nil }
 func (m *memoryStore) Save(token Token) error { m.token = token; return nil }
 
+func TestOAuthBeginRequiresPublicClientConfiguration(t *testing.T) {
+	if _, err := (OAuth{RedirectURI: "http://127.0.0.1/callback"}).Begin(); err == nil || !strings.Contains(err.Error(), "client ID") {
+		t.Fatalf("missing client ID was accepted: %v", err)
+	}
+	if _, err := (OAuth{ClientID: "client", RedirectURI: "://bad"}).Begin(); err == nil || !strings.Contains(err.Error(), "redirect URI") {
+		t.Fatalf("invalid redirect URI was accepted: %v", err)
+	}
+}
+
 func TestOAuthPKCEAndExchange(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/api/token" {

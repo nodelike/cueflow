@@ -27,6 +27,12 @@ type Authorization struct {
 }
 
 func (o OAuth) Begin() (Authorization, error) {
+	if strings.TrimSpace(o.ClientID) == "" {
+		return Authorization{}, fmt.Errorf("Spotify client ID is not configured")
+	}
+	if _, err := url.ParseRequestURI(o.RedirectURI); err != nil {
+		return Authorization{}, fmt.Errorf("invalid Spotify redirect URI: %w", err)
+	}
 	verifier, err := randomURLSafe(64)
 	if err != nil {
 		return Authorization{}, err
